@@ -35,7 +35,10 @@ class Layer(torch.nn.Module):
             self.layer = torch.nn.Conv2d(inp, oup, **kwargs)
 
         if bn:
-            self.bn = torch.nn.BatchNorm1d(oup)
+            if layer in ['linear', 'conv1d']:
+                self.bn = torch.nn.BatchNorm1d(oup)
+            elif layer in ['conv2d']:
+                self.bn = torch.nn.BatchNorm2d(oup)
         else:
             self.bn = DoNothing()
 

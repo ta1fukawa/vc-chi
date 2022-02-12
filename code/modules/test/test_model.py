@@ -6,6 +6,7 @@ sys.path.append('code')
 from modules import global_value as g
 from modules import model
 
+
 g.nmels = 80
 g.style_dim = 256
 g.dim_neck = 16
@@ -32,3 +33,6 @@ print(code.shape)  # shape = (BS, SEQ_LEN, dim_neck * 2)
 
 r = net.decoder(code, s_emb)
 print(r.shape)  # shape = (BS, SEQ_LEN, nmels)
+
+q = net.postnet(r)
+print(q.shape)  # shape = (BS, SEQ_LEN, nmels)

@@ -90,17 +90,19 @@ class Postnet(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.line1 = mp.Layer(80,  512, layer='linear', bn=True, activation='tanh')
-        self.line2 = mp.Layer(512, 512, layer='linear', bn=True, activation='tanh')
-        self.line3 = mp.Layer(512, 512, layer='linear', bn=True, activation='tanh')
-        self.line4 = mp.Layer(512, 512, layer='linear', bn=True, activation='tanh')
-        self.line5 = mp.Layer(512, 80,  layer='linear', bn=True, activation='linear')
+        self.conv1 = mp.Layer(80,  512, layer='conv1d', bn=True, activation='tanh',   kernel_size=5, padding='same')
+        self.conv2 = mp.Layer(512, 512, layer='conv1d', bn=True, activation='tanh',   kernel_size=5, padding='same')
+        self.conv3 = mp.Layer(512, 512, layer='conv1d', bn=True, activation='tanh',   kernel_size=5, padding='same')
+        self.conv4 = mp.Layer(512, 512, layer='conv1d', bn=True, activation='tanh',   kernel_size=5, padding='same')
+        self.conv5 = mp.Layer(512, 80,  layer='conv1d', bn=True, activation='linear', kernel_size=5, padding='same')
 
     def forward(self, x: torch.Tensor):
-        x = self.line1(x)
-        x = self.line2(x)
-        x = self.line3(x)
-        x = self.line4(x)
-        x = self.line5(x)
+        x = x.transpose(1, 2)
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = self.conv5(x)
+        x = x.transpose(1, 2)
 
         return x
