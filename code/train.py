@@ -9,44 +9,44 @@ import numpy as np
 import torch
 import torch.utils.tensorboard
 import tqdm
+import yaml
 
 from modules import common
 from modules import global_value as g
 from modules import model
 
 
-def main():
-    # おまじない
-    assert torch.cuda.is_available()  # GPUが使えるか確認
+def main(config_path):
+    assert torch.cuda.is_available()
 
-    # 実行時変数
-    g.code_id = 'vc-chi-a'
-    g.run_id  = datetime.datetime.now().strftime('%Y%m%d/%H%M%S')
+    g.code_id = 'apple'
+    g.run_id  = datetime.datetime.now().strftime('%Y%m/%d/%H%M%S')
 
-    # 超定数
     g.device = torch.device('cuda:0')
 
-    # ファイル出力先設定
     work_dir = pathlib.Path('wd', g.code_id, g.run_id)
     work_dir.mkdir(parents=True)
 
-    # ロガー初期化
     common.init_logger(work_dir / 'run.log')
     logging.info(f'CODE/RUN: {g.code_id}/{g.run_id}')
 
-    # コードバックアップ
     common.backup_codes(pathlib.Path(__file__).parent, work_dir / 'code')
+    
+    config = yaml.load(config_path.open(mode='r'), Loader=yaml.FullLoader)
+    logging.info(f'CONFIG: {config}')
 
-    ### 準備 ###
+    for k, v in config.items():
+        setattr(g, k, v)
 
-    logging.info('Prepare')
-
-    # モデル定義
-    net = model.Net()
+    net = model.Net().to(g.device)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    args = []
+    parser.add_argument('config_path', type=pathlib.Path)
+
+    args = [
+        'config.yaml'
+    ]
 
     try:
         main(**vars(parser.parse_args(args)))
