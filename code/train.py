@@ -2,7 +2,6 @@ import argparse
 import datetime
 import logging
 import pathlib
-from pickletools import optimize
 import traceback
 
 import numpy as np
@@ -15,7 +14,8 @@ from modules import global_value as g
 from modules import model
 from modules import dataset
 
-def main(config_path):
+
+def main(config_path, load_model_path=None):
     assert torch.cuda.is_available()
 
     g.code_id = 'apple'
@@ -39,15 +39,17 @@ def main(config_path):
 
     net = model.Net().to(g.device)
     
-    if g.load_model_path is not None:
-        net.load_state_dict(torch.load(g.load_model_path, map_location=g.device))
-        logging.info(f'LOAD MODEL: {g.load_model_path}')
+    if load_model_path is not None:
+        net.load_state_dict(torch.load(load_model_path, map_location=g.device))
+        logging.info(f'LOAD MODEL: {load_model_path}')
 
     train_dataset = dataset.Dataset()
     test_dataset  = dataset.Dataset()
 
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(net.parameters(), lr=g.lr)
+
+    sw = torch.utils.tensorboard.SummaryWriter(work_dir / 'tboard')
 
     (work_dir / 'cp').mkdir(parents=True)
 
@@ -58,17 +60,23 @@ def main(config_path):
         train_loss = train(net, train_dataset, criterion, optimizer)
         test_loss  = test(net, test_dataset, criterion)
 
+        sw.add_scalar('train_loss', train_loss, epoch)
+        sw.add_scalar('test_loss', test_loss, epoch)
+        sw.flush()
+
+        logging.info(f'EPOCH: [{epoch:03d}/{g.epochs:03d}] train_loss={train_loss:.6f} test_loss={test_loss:.6f}')
+
         if test_loss < best_test_loss:
             best_test_loss = test_loss
+            logging.info(f'Best test loss')
             torch.save(net.state_dict(), work_dir / 'cp' / 'best_test.pth')
 
         if train_loss < best_train_loss:
             best_train_loss = train_loss
+            logging.info(f'Best train loss')
             torch.save(net.state_dict(), work_dir / 'cp' / 'best_train.pth')
 
-        logging.info(f'EPOCH: {epoch:03d}/{g.epochs:03d}')
-        logging.info(f'TRAIN: {train_loss:.6f}')
-        logging.info(f'TEST : {test_loss :.6f}')
+    sw.close()
 
 def train(net, train_dataset, criterion, optimizer):
     net.train()
@@ -92,9 +100,9 @@ def train(net, train_dataset, criterion, optimizer):
         loss.backward()
         optimizer.step()
 
-        print(f'TRAIN: [{i:03d}/{len(train_dataset):03d}] loss={loss.item():.6f}\033[K\033[G', end='')
+        print(f'[Training: {i:03d}/{g.num_repeats:03d}] loss={loss.item():.6f}\033[K\033[G', end='')
 
-    train_loss /= len(train_dataset)
+    train_loss /= g.num_repeats
 
     return train_loss
 
@@ -116,15 +124,16 @@ def test(net, test_dataset, criterion):
         loss = criterion(q, c)
         test_loss += loss.item()
 
-        print(f'TEST: [{i:03d}/{len(test_dataset):03d}] loss={loss.item():.6f}\033[K\033[G', end='')
+        print(f'[Testing: {i:03d}/{g.num_repeats:03d}] loss={loss.item():.6f}\033[K\033[G', end='')
 
-    test_loss /= len(test_dataset)
+    test_loss /= g.num_repeats
 
     return test_loss
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('config_path', type=pathlib.Path)
+    parser.add_argument('--load_model_path', type=pathlib.Path)
 
     args = [
         'config.yaml'
@@ -139,6 +148,4 @@ if __name__ == '__main__':
         logging.info('Done')
         logging.shutdown()
 
-        # おまじない
-        gc.collect()
         torch.cuda.empty_cache()

@@ -1,8 +1,12 @@
+seg_len    : 128
 nmels      : 80
 style_dim  : 256
 dim_neck   : 16
 lstm_stride: 16
 
-log_interval : 100
-lr : 0.001
+epochs        : 50
+num_repeats   : 100
+log_interval  : 100
+lr            : 0.001
 clip_grad_norm: 1
+batch_size    : 8
