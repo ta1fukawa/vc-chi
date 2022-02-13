@@ -60,21 +60,24 @@ def main(config_path, load_model_path=None):
         train_loss = train(net, train_dataset, criterion, optimizer)
         test_loss  = test(net, test_dataset, criterion)
 
-        sw.add_scalar('train_loss', train_loss, epoch)
-        sw.add_scalar('test_loss', test_loss, epoch)
+        sw.add_scalars('loss', {'train': train_loss, 'test': test_loss}, epoch)
         sw.flush()
 
-        logging.info(f'EPOCH: [{epoch:03d}/{g.epochs:03d}] train_loss={train_loss:.6f} test_loss={test_loss:.6f}')
-
-        if test_loss < best_test_loss:
-            best_test_loss = test_loss
-            logging.info(f'Best test loss')
-            torch.save(net.state_dict(), work_dir / 'cp' / 'best_test.pth')
+        logging.info(f'EPOCH: [{epoch:03d}/{g.epochs:03d}]')
 
         if train_loss < best_train_loss:
             best_train_loss = train_loss
-            logging.info(f'Best train loss')
+            logging.info(f'Train: loss={best_train_loss:.6f} -> save model')
             torch.save(net.state_dict(), work_dir / 'cp' / 'best_train.pth')
+        else:
+            logging.info(f'Train: loss={train_loss:.6f}')
+
+        if test_loss < best_test_loss:
+            best_test_loss = test_loss
+            logging.info(f'Test: loss={best_test_loss:.6f} -> save model')
+            torch.save(net.state_dict(), work_dir / 'cp' / 'best_test.pth')
+        else:
+            logging.info(f'Test: loss={test_loss:.6f}')
 
     sw.close()
 
@@ -83,9 +86,10 @@ def train(net, train_dataset, criterion, optimizer):
 
     train_loss = 0.0
 
-    for i, (c, s) in enumerate(train_dataset):
+    for i, (c, s, t) in enumerate(train_dataset):
         c = c.to(g.device)
         s = s.to(g.device)
+        t = t.to(g.device)
 
         c_emb = net.style_enc(c)
         s_emb = net.style_enc(s)
@@ -93,7 +97,7 @@ def train(net, train_dataset, criterion, optimizer):
         r = net.decoder(code, s_emb)
         q = net.postnet(r)
 
-        loss = criterion(q, c)
+        loss = criterion(q, t)
         train_loss += loss.item()
 
         optimizer.zero_grad()
@@ -111,9 +115,10 @@ def test(net, test_dataset, criterion):
 
     test_loss = 0.0
 
-    for i, (c, s) in enumerate(test_dataset):
+    for i, (c, s, t) in enumerate(test_dataset):
         c = c.to(g.device)
         s = s.to(g.device)
+        t = t.to(g.device)
 
         c_emb = net.style_enc(c)
         s_emb = net.style_enc(s)
@@ -121,10 +126,10 @@ def test(net, test_dataset, criterion):
         r = net.decoder(code, s_emb)
         q = net.postnet(r)
 
-        loss = criterion(q, c)
+        loss = criterion(q, t)
         test_loss += loss.item()
 
-        print(f'[Testing: {i:03d}/{g.num_repeats:03d}] loss={loss.item():.6f}\033[K\033[G', end='')
+        print(f'[Testing: {i:03d}/{g.num_repeats:03d}]  loss={loss.item():.6f}\033[K\033[G', end='')
 
     test_loss /= g.num_repeats
 
