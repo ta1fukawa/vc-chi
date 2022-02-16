@@ -3,6 +3,7 @@ import torch
 import pathlib
 from modules import global_value as g
 
+
 class Dataset(torch.utils.data.Dataset):
     def __init__(self):
         speakers = sorted(list(pathlib.Path('/home/g2181479/vc-beta/vc3/mel-jvs').glob('*')))

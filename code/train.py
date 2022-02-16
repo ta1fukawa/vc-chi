@@ -21,7 +21,7 @@ def main(config_path, load_model_path=None):
     g.code_id = 'apple'
     g.run_id  = datetime.datetime.now().strftime('%Y%m/%d/%H%M%S')
 
-    g.device = torch.device('cuda:0')
+    g.device = torch.device('cuda:1')
 
     work_dir = pathlib.Path('wd', g.code_id, g.run_id)
     work_dir.mkdir(parents=True)
@@ -95,7 +95,7 @@ def train(net, train_dataset, criterion, optimizer):
         s_emb = net.style_enc(s)
         code = net.content_enc(c, c_emb)
         r = net.decoder(code, s_emb)
-        q = net.postnet(r)
+        q = r + net.postnet(r)
 
         loss = criterion(q, t)
         train_loss += loss.item()
@@ -124,7 +124,7 @@ def test(net, test_dataset, criterion):
         s_emb = net.style_enc(s)
         code = net.content_enc(c, c_emb)
         r = net.decoder(code, s_emb)
-        q = net.postnet(r)
+        q = r + net.postnet(r)
 
         loss = criterion(q, t)
         test_loss += loss.item()

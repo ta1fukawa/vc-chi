@@ -2,6 +2,7 @@ import torch
 
 from modules import global_value as g
 
+
 class DoNothing(torch.nn.Module):
     def __init__(self):
         super(DoNothing, self).__init__()
@@ -24,7 +25,7 @@ def get_activation(name, **kwargs):
         raise ValueError(f'Unknown activation: {name}')
 
 class Layer(torch.nn.Module):
-    def __init__(self, inp, oup, layer='linear', bn=False, activation=None, activation_param=None, **kwargs):
+    def __init__(self, inp, oup, layer='linear', bn=False, activation='linear', activation_param=None, **kwargs):
         super(Layer, self).__init__()
 
         if layer == 'linear':
@@ -42,11 +43,8 @@ class Layer(torch.nn.Module):
         else:
             self.bn = DoNothing()
 
-        if activation is not None:
-            self.activation = get_activation(activation)
-            torch.nn.init.xavier_uniform_(self.layer.weight, gain=torch.nn.init.calculate_gain(activation, param=activation_param))
-        else:
-            self.activation = DoNothing()
+        self.activation = get_activation(activation)
+        torch.nn.init.xavier_uniform_(self.layer.weight, gain=torch.nn.init.calculate_gain(activation, param=activation_param))
 
     def forward(self, x):
         x = self.layer(x)

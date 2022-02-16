@@ -16,7 +16,6 @@ from modules import global_value as g
 
 g.code_id = 'bear'
 g.run_id = datetime.datetime.now().strftime('%Y%m/%d/%H%M%S')
-
 g.device = torch.device('cuda:0')
 
 work_dir = pathlib.Path('wd', g.code_id, g.run_id)
@@ -29,12 +28,11 @@ config = yaml.load(config_path.open(mode='r'), Loader=yaml.FullLoader)
 
 for k, v in config.items():
     setattr(g, k, v)
-
 g.batch_size = 1
 
 net = model.Net().to(g.device)
 
-net.load_state_dict(torch.load('wd/apple/202202/13/191412/cp/best_test.pth', map_location=g.device))
+net.load_state_dict(torch.load('model/model.pth', map_location=g.device))
 
 ds = dataset.Dataset()
 c, s, t = next(iter(ds))
@@ -46,7 +44,7 @@ c_emb = net.style_enc(c)
 s_emb = net.style_enc(s)
 code = net.content_enc(c, c_emb)
 r = net.decoder(code, s_emb)
-q = net.postnet(r)
+q = r + net.postnet(r)
 
 c = c.squeeze(0).detach().cpu().numpy()
 s = s.squeeze(0).detach().cpu().numpy()

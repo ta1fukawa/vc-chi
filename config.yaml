@@ -1,8 +1,8 @@
 seg_len    : 128
 nmels      : 80
 style_dim  : 256
-dim_neck   : 16
-lstm_stride: 16
+dim_neck   : 32
+lstm_stride: 32
 
 epochs        : 300
 num_repeats   : 100
