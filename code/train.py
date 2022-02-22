@@ -44,9 +44,14 @@ def main(config_path, load_model_path=None):
         logging.info(f'LOAD MODEL: {load_model_path}')
 
     train_dataset = dataset.Dataset()
-    test_dataset  = dataset.Dataset()
+    test_dataset  = dataset.Dataset(True)
 
-    criterion = torch.nn.MSELoss()
+    def criterion(c, s, t, r, q, c_code, q_code):
+        r_loss = torch.nn.functional.mse_loss(r, t)
+        q_loss = torch.nn.functional.mse_loss(q, t)
+        code_loss = torch.nn.functional.l1_loss(q_code, c_code)
+        return r_loss + q_loss + code_loss
+
     optimizer = torch.optim.Adam(net.parameters(), lr=g.lr)
 
     sw = torch.utils.tensorboard.SummaryWriter(work_dir / 'tboard')
@@ -93,11 +98,12 @@ def train(net, train_dataset, criterion, optimizer):
 
         c_emb = net.style_enc(c)
         s_emb = net.style_enc(s)
-        code = net.content_enc(c, c_emb)
-        r = net.decoder(code, s_emb)
+        c_feat, c_code = net.content_enc(c, c_emb)
+        r = net.decoder(c_feat, s_emb)
         q = r + net.postnet(r)
+        q_feat, q_code = net.content_enc(q, c_emb)
 
-        loss = criterion(q, t)
+        loss = criterion(c, s, t, r, q, c_code, q_code)
         train_loss += loss.item()
 
         optimizer.zero_grad()
@@ -106,7 +112,7 @@ def train(net, train_dataset, criterion, optimizer):
 
         print(f'[Training: {i:03d}/{g.num_repeats:03d}] loss={loss.item():.6f}\033[K\033[G', end='')
 
-    train_loss /= g.num_repeats
+    train_loss /= g.num_repeats * g.batch_size
 
     return train_loss
 
@@ -122,16 +128,17 @@ def test(net, test_dataset, criterion):
 
         c_emb = net.style_enc(c)
         s_emb = net.style_enc(s)
-        code = net.content_enc(c, c_emb)
-        r = net.decoder(code, s_emb)
+        c_feat, c_code = net.content_enc(c, c_emb)
+        r = net.decoder(c_feat, s_emb)
         q = r + net.postnet(r)
+        q_feat, q_code = net.content_enc(q, c_emb)
 
-        loss = criterion(q, t)
+        loss = criterion(c, s, t, r, q, c_code, q_code)
         test_loss += loss.item()
 
-        print(f'[Testing: {i:03d}/{g.num_repeats:03d}]  loss={loss.item():.6f}\033[K\033[G', end='')
+        print(f'[Testing: {i:03d}/{g.num_test_repeats:03d}]  loss={loss.item():.6f}\033[K\033[G', end='')
 
-    test_loss /= g.num_repeats
+    test_loss /= g.num_test_repeats * g.batch_size
 
     return test_loss
 

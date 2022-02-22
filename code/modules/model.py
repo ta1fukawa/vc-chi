@@ -30,7 +30,7 @@ class ContentEncoder(torch.nn.Module):
 
         self.lstm = torch.nn.LSTM(512, g.dim_neck, 2, batch_first=True, bidirectional=True)
 
-    def forward(self, c: torch.Tensor, x_emb):
+    def forward(self, c: torch.Tensor, x_emb: torch.Tensor):
         x_emb = x_emb.unsqueeze(1).expand(-1, c.size(1), -1)  # Expand to time dimension
         x = torch.cat([c, x_emb], dim=-1)  # Concatenate in frequency dimension
 
@@ -42,13 +42,13 @@ class ContentEncoder(torch.nn.Module):
 
         self.lstm.flatten_parameters()
         x, _ = self.lstm(x)
-        x = torch.cat([
+        code = torch.cat([
             x[:, g.lstm_stride - 1::g.lstm_stride, :g.dim_neck],
             x[:, :-g.lstm_stride + 1:g.lstm_stride, g.dim_neck:]
         ], dim=-1)
-        x = x.repeat_interleave(c.size(1) // x.size(1), dim=1)
+        x = code.repeat_interleave(c.size(1) // code.size(1), dim=1)
 
-        return x
+        return x, code
 
 class StyleEncoder(torch.nn.Module):
     def __init__(self):
@@ -60,6 +60,7 @@ class StyleEncoder(torch.nn.Module):
     def forward(self, x: torch.Tensor):
         _, (hn, _) = self.lstm(x)
         x = self.line(hn[-1])
+        x = x.div(x.norm(p=2, dim=-1, keepdim=True))
 
         return x
 
@@ -72,7 +73,7 @@ class Decoder(torch.nn.Module):
         self.conv2 = mp.Layer(512, 512, layer='conv1d', bn=True, activation='relu', kernel_size=5, padding='same')
         self.conv3 = mp.Layer(512, 512, layer='conv1d', bn=True, activation='relu', kernel_size=5, padding='same')
         self.lstm2 = torch.nn.LSTM(512, 1024, 2, batch_first=True)
-        self.line = mp.Layer(1024, g.nmels, layer='linear', activation='linear')
+        self.line = mp.Layer(1024, g.nmels, layer='linear')
 
     def forward(self, code: torch.Tensor, s_emb: torch.Tensor):
         s_emb = s_emb.unsqueeze(1).expand(-1, code.size(1), -1)  # Expand to time dimension

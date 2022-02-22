@@ -31,8 +31,8 @@ for k, v in config.items():
 g.batch_size = 1
 
 net = model.Net().to(g.device)
-
-net.load_state_dict(torch.load('model/model.pth', map_location=g.device))
+net.load_state_dict(torch.load('wd/apple/202202/17/010035/cp/best_test.pth', map_location=g.device))
+net.eval()
 
 ds = dataset.Dataset()
 c, s, t = next(iter(ds))
@@ -40,10 +40,11 @@ c = c.to(g.device)
 s = s.to(g.device)
 t = t.to(g.device)
 
+s=c
 c_emb = net.style_enc(c)
 s_emb = net.style_enc(s)
-code = net.content_enc(c, c_emb)
-r = net.decoder(code, s_emb)
+feat, code = net.content_enc(c, c_emb)
+r = net.decoder(feat, s_emb)
 q = r + net.postnet(r)
 
 c = c.squeeze(0).detach().cpu().numpy()
@@ -52,9 +53,8 @@ t = t.squeeze(0).detach().cpu().numpy()
 r = r.squeeze(0).detach().cpu().numpy()
 q = q.squeeze(0).detach().cpu().numpy()
 
-a = (c, s, t, r, q)
-a = ((a - np.min(a) + 1e-8) / np.max(a) * 255).astype(np.int32)
-c, s, t, r, q = a
+a = [c, s, t, r, q]
+c, s, t, r, q = ((a - np.min(a) + 1e-8) / np.max(a) * 255).astype(np.int32)
 
 (work_dir / 'img').mkdir(parents=True)
 
