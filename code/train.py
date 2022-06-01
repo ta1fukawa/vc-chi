@@ -15,7 +15,7 @@ from modules import model
 from modules import dataset
 
 
-def main(config_path, model_load_path=None):
+def main(config_path, model_load_path=None, gpu=0):
     g.code_id = 'apple'
     g.run_id  = datetime.datetime.now().strftime('%Y%m/%d/%H%M%S')
 
@@ -33,9 +33,9 @@ def main(config_path, model_load_path=None):
     for k, v in config.items():
         setattr(g, k, v)
 
-    if g.gpu >= 0:
+    if gpu >= 0:
         assert torch.cuda.is_available()
-        g.device = torch.device(f'cuda:{g.gpu}')
+        g.device = torch.device(f'cuda:{gpu}')
     else:
         g.device = torch.device('cpu')
 
@@ -55,7 +55,6 @@ def main(config_path, model_load_path=None):
         return r_loss + q_loss + code_loss
 
     optimizer = torch.optim.Adam(net.parameters(), lr=g.lr)
-
 
     (work_dir / 'cp').mkdir(parents=True)
 
