@@ -1,18 +1,17 @@
 import argparse
 import datetime
 import logging
+import os
 import pathlib
 import traceback
 
-import numpy as np
 import torch
 import torch.utils.tensorboard
 import yaml
 
-from modules import common
+from modules import common, dataset
 from modules import global_value as g
 from modules import model
-from modules import dataset
 
 
 def main(config_path, model_load_path=None, gpu=0):
@@ -45,8 +44,8 @@ def main(config_path, model_load_path=None, gpu=0):
         net.load_state_dict(torch.load(model_load_path, map_location=g.device))
         logging.info(f'LOAD MODEL: {model_load_path}')
 
-    train_dataset = dataset.Dataset(g.use_same_speaker, test_mode=False)
-    test_dataset  = dataset.Dataset(g.use_same_speaker, test_mode=True)
+    train_dataset = dataset.Dataset(g.use_same_speaker, **g.train_dataset)
+    valdt_dataset = dataset.Dataset(g.use_same_speaker, **g.valdt_dataset)
 
     def criterion(c, s, t, r, q, c_feat, q_feat):
         r_loss = torch.nn.functional.mse_loss(r, t)
@@ -58,28 +57,28 @@ def main(config_path, model_load_path=None, gpu=0):
 
     (work_dir / 'cp').mkdir(parents=True)
 
-    best_train_loss = best_test_loss = float('inf')
+    best_train_loss = best_valdt_loss = float('inf')
 
     with torch.utils.tensorboard.SummaryWriter(work_dir / 'tboard') as sw:
         for epoch in range(g.num_epochs):
             train_loss = train(epoch, net, train_dataset, criterion, optimizer)
-            test_loss  = test (epoch, net, test_dataset,  criterion)
+            valdt_loss  = valdt (epoch, net, valdt_dataset,  criterion)
 
-            sw.add_scalars('loss', {'train': train_loss, 'test': test_loss}, epoch)
+            sw.add_scalars('loss', {'train': train_loss, 'valdt': valdt_loss}, epoch)
             sw.flush()
 
-            logging.info(f'[{epoch:03d}/{g.num_epochs:03d}] TRAIN LOSS: {train_loss:.6f}, TEST LOSS: {test_loss:.6f}')
+            logging.info(f'[{epoch:03d}/{g.num_epochs:03d}] TRAIN LOSS: {train_loss:.6f}, valdt LOSS: {valdt_loss:.6f}')
 
             if train_loss < best_train_loss:
                 best_train_loss = train_loss
                 torch.save(net.state_dict(), work_dir / 'cp' / 'best_train.pth')
 
-            if test_loss < best_test_loss:
-                best_test_loss = test_loss
-                torch.save(net.state_dict(), work_dir / 'cp' / 'best_test.pth')
+            if valdt_loss < best_valdt_loss:
+                best_valdt_loss = valdt_loss
+                torch.save(net.state_dict(), work_dir / 'cp' / 'best_valdt.pth')
 
     logging.info(f'BEST TRAIN LOSS: {best_train_loss:.6f}')
-    logging.info(f'BEST TEST LOSS: {best_test_loss:.6f}')
+    logging.info(f'BEST valdt LOSS: {best_valdt_loss:.6f}')
 
 def train(epoch, net, dataset, criterion, optimizer):
     net.train()
@@ -103,14 +102,14 @@ def train(epoch, net, dataset, criterion, optimizer):
         loss.backward()
         optimizer.step()
 
-        print(f'[{epoch:03d}/{g.num_epochs:03d}] Training: {i:03d}/{g.num_repeats:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
+        print(f'[{epoch:03d}/{g.num_epochs:03d}] Training: {i:03d}/{g.train_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
 
-    avg_loss /= g.num_repeats * g.batch_size
+    avg_loss /= g.train_dataset['num_repeats'] * g.batch_size
 
     return avg_loss
 
 
-def test(epoch, net, dataset, criterion):
+def valdt(epoch, net, dataset, criterion):
     net.eval()
 
     avg_loss = 0.0
@@ -128,9 +127,9 @@ def test(epoch, net, dataset, criterion):
         loss = criterion(c, s, t, r, q, c_feat, q_feat)
         avg_loss += loss.item()
 
-        print(f'[{epoch:03d}/{g.num_epochs:03d}] Testing: {i:03d}/{g.num_repeats:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
+        print(f'[{epoch:03d}/{g.num_epochs:03d}] valdt: {i:03d}/{g.valdt_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
 
-    avg_loss /= g.num_test_repeats * g.batch_size
+    avg_loss /= g.valdt_dataset['num_repeats'] * g.batch_size
 
     return avg_loss
 
@@ -140,12 +139,8 @@ if __name__ == '__main__':
     parser.add_argument('--model_load_path', type=pathlib.Path)
     parser.add_argument('--gpu',             type=int, default=0)
 
-    args = [
-        '--gpu', '1',
-    ]
-
     try:
-        main(**vars(parser.parse_args(args)))
+        main(**vars(parser.parse_args()))
     except Exception as e:
         logging.error(traceback.format_exc())
         raise e

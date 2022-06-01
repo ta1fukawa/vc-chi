@@ -5,17 +5,17 @@ from modules import global_value as g
 
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, use_same_speaker, test_mode=False):
+    def __init__(self, use_same_speaker, num_repeats, speaker_start=None, speaker_end=None, speech_start=None, speech_end=None):
         self.use_same_speaker = use_same_speaker
-        self.test_mode = test_mode
+        self.num_repeats = num_repeats
 
         speakers = sorted(list(pathlib.Path(g.mel_path).glob('*')))
-        speakers = speakers[:g.num_speakers] if test_mode else speakers[g.num_speakers:]
+        speakers = speakers[speaker_start:speaker_end]
 
         self.files = []
         for speaker in speakers:
             speeches = sorted(list(speaker.glob('*.pt')))
-            speeches = speeches[:g.num_speeches] if test_mode else speeches[g.num_speeches:]
+            speeches = speeches[speech_start:speech_end]
 
             self.files.append(speeches)
 
@@ -28,9 +28,9 @@ class Dataset(torch.utils.data.Dataset):
         return data
 
     def __iter__(self):
-        for i in range(g.num_repeats if not self.test_mode else g.num_test_repeats):
+        for i in range(self.num_repeats):
             np.random.seed(i)
-            
+
             if self.use_same_speaker:
                 speech_idxes = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
                 speaker_idxes = np.random.choice(len(self.files), g.batch_size, replace=False)

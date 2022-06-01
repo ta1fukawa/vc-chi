@@ -1,3 +1,7 @@
+import os
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+
 import torch
 import sys
 import yaml
@@ -17,10 +21,12 @@ from modules import global_value as g
 
 g.code_id = 'bear'
 g.run_id  = datetime.datetime.now().strftime('%Y%m/%d/%H%M%S')
-g.device  = torch.device('cuda:1')
+g.device  = torch.device('cuda:0')
 
 work_dir = pathlib.Path('wd', g.code_id, g.run_id)
 work_dir.mkdir(parents=True)
+
+print(f'CODE/RUN: {g.code_id}/{g.run_id}')
 
 common.backup_codes(pathlib.Path(__file__).parent, work_dir / 'code')
 
@@ -32,10 +38,10 @@ for k, v in config.items():
 g.batch_size = 1
 
 net = model.Net().to(g.device)
-net.load_state_dict(torch.load('wd/apple/202206/01/140427/cp/best_test.pth', map_location=g.device))
+net.load_state_dict(torch.load('wd/apple/202206/01/214343/cp/best_valdt.pth', map_location=g.device))
 net.eval()
 
-ds = dataset.Dataset(g.use_same_speaker, test_mode=True)
+ds = dataset.Dataset(g.use_same_speaker, **g.train_dataset)
 c, s, t = next(iter(ds))
 c = c.to(g.device); s = s.to(g.device); t = t.to(g.device)
 
