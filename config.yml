@@ -1,10 +1,10 @@
 seg_len     : 128
 nmels       : 80
 style_dim   : 256
-dim_neck    : 32
-lstm_stride : 32
+dim_neck    : 64
+lstm_stride : 8
 
-num_epochs       : 300
+num_epochs       : 100
 num_repeats      : 100
 num_test_repeats : 20
 log_interval     : 100
@@ -14,3 +14,7 @@ batch_size       : 8
 
 num_speakers : 80
 num_speeches : 80
+
+use_same_speaker : true
+
+mel_path : '/home/g2181479/vc-beta/vc3/mel-jvs'

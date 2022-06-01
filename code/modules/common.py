@@ -14,7 +14,7 @@ def init_logger(
     logger = logging.getLogger('')
 
     stdout_fmt  = '%(asctime)s %(levelname)s: %(message)s'
-    coloredlogs.install(level='DEBUG', logger=logger, fmt=stdout_fmt)
+    coloredlogs.install(level='INFO', logger=logger, fmt=stdout_fmt)
 
     logflie_fmt = '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s: %(message)s'
     handler = logging.FileHandler(log_path, mode=mode)

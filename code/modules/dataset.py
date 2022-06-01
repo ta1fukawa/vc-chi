@@ -5,10 +5,11 @@ from modules import global_value as g
 
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, test_mode=False):
+    def __init__(self, use_same_speaker, test_mode=False):
+        self.use_same_speaker = use_same_speaker
         self.test_mode = test_mode
 
-        speakers = sorted(list(pathlib.Path('/home/g2181479/vc-beta/vc3/mel-jvs').glob('*')))
+        speakers = sorted(list(pathlib.Path(g.mel_path).glob('*')))
         speakers = speakers[:g.num_speakers] if test_mode else speakers[g.num_speakers:]
 
         self.files = []
@@ -27,21 +28,36 @@ class Dataset(torch.utils.data.Dataset):
         return data
 
     def __iter__(self):
-        for _ in range(g.num_repeats if not self.test_mode else g.num_test_repeats):
-            c_speech_idxes  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
-            s_speech_idxes  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
-            c_speaker_idxes = np.random.choice(len(self.files), g.batch_size, replace=False)
-            s_speaker_idxes = np.random.choice(len(self.files), g.batch_size, replace=False)
-            c_data = torch.stack([
-                self.padding(torch.load(self.files[speaker_idx][speech_idx]))
-                for speaker_idx, speech_idx in zip(c_speaker_idxes, c_speech_idxes)
-            ], dim=0)
-            s_data = torch.stack([
-                self.padding(torch.load(self.files[speaker_idx][speech_idx]))
-                for speaker_idx, speech_idx in zip(s_speaker_idxes, s_speech_idxes)
-            ], dim=0)
-            t_data = torch.stack([
-                self.padding(torch.load(self.files[speaker_idx][speech_idx]))
-                for speaker_idx, speech_idx in zip(s_speaker_idxes, c_speech_idxes)
-            ], dim=0)
-            yield c_data, s_data, t_data
+        for i in range(g.num_repeats if not self.test_mode else g.num_test_repeats):
+            np.random.seed(i)
+            
+            if self.use_same_speaker:
+                speech_idxes = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
+                speaker_idxes = np.random.choice(len(self.files), g.batch_size, replace=False)
+
+                data = torch.stack([
+                    self.padding(torch.load(self.files[speaker_idx][speech_idx]))
+                    for speaker_idx, speech_idx in zip(speaker_idxes, speech_idxes)
+                ], dim=0)
+
+                yield data, data, data
+            else:
+                c_speech_idxes  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
+                s_speech_idxes  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
+                c_speaker_idxes = np.random.choice(len(self.files), g.batch_size, replace=False)
+                s_speaker_idxes = np.random.choice(len(self.files), g.batch_size, replace=False)
+
+                c_data = torch.stack([
+                    self.padding(torch.load(self.files[speaker_idx][speech_idx]))
+                    for speaker_idx, speech_idx in zip(c_speaker_idxes, c_speech_idxes)
+                ], dim=0)
+                s_data = torch.stack([
+                    self.padding(torch.load(self.files[speaker_idx][speech_idx]))
+                    for speaker_idx, speech_idx in zip(s_speaker_idxes, s_speech_idxes)
+                ], dim=0)
+                t_data = torch.stack([
+                    self.padding(torch.load(self.files[speaker_idx][speech_idx]))
+                    for speaker_idx, speech_idx in zip(s_speaker_idxes, c_speech_idxes)
+                ], dim=0)
+                
+                yield c_data, s_data, t_data

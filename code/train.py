@@ -45,8 +45,8 @@ def main(config_path, model_load_path=None, gpu=0):
         net.load_state_dict(torch.load(model_load_path, map_location=g.device))
         logging.info(f'LOAD MODEL: {model_load_path}')
 
-    train_dataset = dataset.Dataset(test_mode=False)
-    test_dataset  = dataset.Dataset(test_mode=True)
+    train_dataset = dataset.Dataset(g.use_same_speaker, test_mode=False)
+    test_dataset  = dataset.Dataset(g.use_same_speaker, test_mode=True)
 
     def criterion(c, s, t, r, q, c_feat, q_feat):
         r_loss = torch.nn.functional.mse_loss(r, t)
@@ -75,7 +75,7 @@ def main(config_path, model_load_path=None, gpu=0):
                 torch.save(net.state_dict(), work_dir / 'cp' / 'best_train.pth')
 
             if test_loss < best_test_loss:
-                best_test_loss = best_test_loss
+                best_test_loss = test_loss
                 torch.save(net.state_dict(), work_dir / 'cp' / 'best_test.pth')
 
     logging.info(f'BEST TRAIN LOSS: {best_train_loss:.6f}')
@@ -103,7 +103,7 @@ def train(epoch, net, dataset, criterion, optimizer):
         loss.backward()
         optimizer.step()
 
-        print(f'[{epoch:03d}/{g.num_epochs:03d}] Training: {i:03d}/{g.num_repeats:03d} (loss={loss.item():.6f})\033[K\033[G', end='')
+        print(f'[{epoch:03d}/{g.num_epochs:03d}] Training: {i:03d}/{g.num_repeats:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
 
     avg_loss /= g.num_repeats * g.batch_size
 
@@ -128,7 +128,7 @@ def test(epoch, net, dataset, criterion):
         loss = criterion(c, s, t, r, q, c_feat, q_feat)
         avg_loss += loss.item()
 
-        print(f'[{epoch:03d}/{g.num_epochs:03d}] Testing: {i:03d}/{g.num_repeats:03d} (loss={loss.item():.6f})\033[K\033[G', end='')
+        print(f'[{epoch:03d}/{g.num_epochs:03d}] Testing: {i:03d}/{g.num_repeats:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
 
     avg_loss /= g.num_test_repeats * g.batch_size
 

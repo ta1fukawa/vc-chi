@@ -15,6 +15,8 @@ def get_activation(name, **kwargs):
         return torch.nn.ReLU(**kwargs)
     elif name == 'leaky_relu':
         return torch.nn.LeakyReLU(**kwargs)
+    elif name == 'gelu':
+        return torch.nn.GELU(**kwargs)
     elif name == 'sigmoid':
         return torch.nn.Sigmoid(**kwargs)
     elif name == 'tanh':

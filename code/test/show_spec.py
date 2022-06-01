@@ -16,15 +16,15 @@ from modules import global_value as g
 
 
 g.code_id = 'bear'
-g.run_id = datetime.datetime.now().strftime('%Y%m/%d/%H%M%S')
-g.device = torch.device('cuda:0')
+g.run_id  = datetime.datetime.now().strftime('%Y%m/%d/%H%M%S')
+g.device  = torch.device('cuda:1')
 
 work_dir = pathlib.Path('wd', g.code_id, g.run_id)
 work_dir.mkdir(parents=True)
 
 common.backup_codes(pathlib.Path(__file__).parent, work_dir / 'code')
 
-config_path = pathlib.Path('config.yaml')
+config_path = pathlib.Path('config.yml')
 config = yaml.load(config_path.open(mode='r'), Loader=yaml.FullLoader)
 
 for k, v in config.items():
@@ -32,16 +32,13 @@ for k, v in config.items():
 g.batch_size = 1
 
 net = model.Net().to(g.device)
-net.load_state_dict(torch.load('model/model.pth', map_location=g.device))
+net.load_state_dict(torch.load('wd/apple/202206/01/140427/cp/best_test.pth', map_location=g.device))
 net.eval()
 
-ds = dataset.Dataset()
+ds = dataset.Dataset(g.use_same_speaker, test_mode=True)
 c, s, t = next(iter(ds))
-c = c.to(g.device)
-s = s.to(g.device)
-t = t.to(g.device)
+c = c.to(g.device); s = s.to(g.device); t = t.to(g.device)
 
-s=c
 c_emb = net.style_enc(c)
 s_emb = net.style_enc(s)
 feat = net.content_enc(c, c_emb)
@@ -61,20 +58,20 @@ c, s, t, r, q = ((a - np.min(a) + 1e-8) / np.max(a) * 255).astype(np.int32)
 
 plt.figure(figsize=(10, 6))
 plt.imshow(c.T[::-1], cmap='hot')
-plt.savefig(str(work_dir / 'img' / 'c.png'))
+plt.savefig(str(work_dir / 'img' / 'source_content.png'))
 
 plt.figure(figsize=(10, 6))
 plt.imshow(s.T[::-1], cmap='hot')
-plt.savefig(str(work_dir / 'img' / 's.png'))
+plt.savefig(str(work_dir / 'img' / 'source_speaker.png'))
 
 plt.figure(figsize=(10, 6))
 plt.imshow(t.T[::-1], cmap='hot')
-plt.savefig(str(work_dir / 'img' / 't.png'))
+plt.savefig(str(work_dir / 'img' / 'target.png'))
 
 plt.figure(figsize=(10, 6))
 plt.imshow(r.T[::-1], cmap='hot')
-plt.savefig(str(work_dir / 'img' / 'r.png'))
+plt.savefig(str(work_dir / 'img' / 'generated_before.png'))
 
 plt.figure(figsize=(10, 6))
 plt.imshow(q.T[::-1], cmap='hot')
-plt.savefig(str(work_dir / 'img' / 'q.png'))
+plt.savefig(str(work_dir / 'img' / 'generated_after.png'))
