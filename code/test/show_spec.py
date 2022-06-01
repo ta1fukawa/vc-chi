@@ -2,6 +2,7 @@ import torch
 import sys
 import yaml
 import pathlib
+import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import datetime
 import numpy as np
@@ -31,7 +32,7 @@ for k, v in config.items():
 g.batch_size = 1
 
 net = model.Net().to(g.device)
-net.load_state_dict(torch.load('wd/apple/202202/17/010035/cp/best_test.pth', map_location=g.device))
+net.load_state_dict(torch.load('model/model.pth', map_location=g.device))
 net.eval()
 
 ds = dataset.Dataset()
@@ -43,7 +44,7 @@ t = t.to(g.device)
 s=c
 c_emb = net.style_enc(c)
 s_emb = net.style_enc(s)
-feat, code = net.content_enc(c, c_emb)
+feat = net.content_enc(c, c_emb)
 r = net.decoder(feat, s_emb)
 q = r + net.postnet(r)
 

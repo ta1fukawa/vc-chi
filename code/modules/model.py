@@ -48,7 +48,7 @@ class ContentEncoder(torch.nn.Module):
         ], dim=-1)
         x = code.repeat_interleave(c.size(1) // code.size(1), dim=1)
 
-        return x, code
+        return x
 
 class StyleEncoder(torch.nn.Module):
     def __init__(self):

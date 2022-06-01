@@ -15,13 +15,9 @@ from modules import model
 from modules import dataset
 
 
-def main(config_path, load_model_path=None):
-    assert torch.cuda.is_available()
-
+def main(config_path, model_load_path=None):
     g.code_id = 'apple'
     g.run_id  = datetime.datetime.now().strftime('%Y%m/%d/%H%M%S')
-
-    g.device = torch.device('cuda:1')
 
     work_dir = pathlib.Path('wd', g.code_id, g.run_id)
     work_dir.mkdir(parents=True)
@@ -37,74 +33,75 @@ def main(config_path, load_model_path=None):
     for k, v in config.items():
         setattr(g, k, v)
 
+    if g.gpu >= 0:
+        assert torch.cuda.is_available()
+        g.device = torch.device(f'cuda:{g.gpu}')
+    else:
+        g.device = torch.device('cpu')
+
     net = model.Net().to(g.device)
     
-    if load_model_path is not None:
-        net.load_state_dict(torch.load(load_model_path, map_location=g.device))
-        logging.info(f'LOAD MODEL: {load_model_path}')
+    if model_load_path is not None:
+        net.load_state_dict(torch.load(model_load_path, map_location=g.device))
+        logging.info(f'LOAD MODEL: {model_load_path}')
 
-    train_dataset = dataset.Dataset()
-    test_dataset  = dataset.Dataset(True)
+    train_dataset = dataset.Dataset(test_mode=False)
+    test_dataset  = dataset.Dataset(test_mode=True)
 
-    def criterion(c, s, t, r, q, c_code, q_code):
+    def criterion(c, s, t, r, q, c_feat, q_feat):
         r_loss = torch.nn.functional.mse_loss(r, t)
         q_loss = torch.nn.functional.mse_loss(q, t)
-        code_loss = torch.nn.functional.l1_loss(q_code, c_code)
+        code_loss = torch.nn.functional.l1_loss(q_feat, c_feat)
         return r_loss + q_loss + code_loss
 
     optimizer = torch.optim.Adam(net.parameters(), lr=g.lr)
 
-    sw = torch.utils.tensorboard.SummaryWriter(work_dir / 'tboard')
 
     (work_dir / 'cp').mkdir(parents=True)
 
-    best_train_loss = 1e+10
-    best_test_loss  = 1e+10
+    best_train_loss = best_test_loss = float('inf')
 
-    for epoch in range(g.epochs):
-        train_loss = train(net, train_dataset, criterion, optimizer)
-        test_loss  = test(net, test_dataset, criterion)
+    with torch.utils.tensorboard.SummaryWriter(work_dir / 'tboard') as sw:
+        for epoch in range(g.num_epochs):
+            train_loss = train(net, train_dataset, criterion, optimizer)
+            test_loss  = test (net, test_dataset,  criterion)
 
-        sw.add_scalars('loss', {'train': train_loss, 'test': test_loss}, epoch)
-        sw.flush()
+            sw.add_scalars('loss', {'train': train_loss, 'test': test_loss}, epoch)
+            sw.flush()
 
-        logging.info(f'EPOCH: [{epoch:03d}/{g.epochs:03d}]')
+            logging.info(f'EPOCH: [{epoch:03d}/{g.num_epochs:03d}]')
 
-        if train_loss < best_train_loss:
-            best_train_loss = train_loss
-            logging.info(f'Train: loss={best_train_loss:.6f} -> save model')
-            torch.save(net.state_dict(), work_dir / 'cp' / 'best_train.pth')
-        else:
-            logging.info(f'Train: loss={train_loss:.6f}')
+            if train_loss < best_train_loss:
+                best_train_loss = train_loss
+                logging.info(f'Train: loss={best_train_loss:.6f} -> save model')
+                torch.save(net.state_dict(), work_dir / 'cp' / 'best_train.pth')
+            else:
+                logging.info(f'Train: loss={train_loss:.6f}')
 
-        if test_loss < best_test_loss:
-            best_test_loss = test_loss
-            logging.info(f'Test: loss={best_test_loss:.6f} -> save model')
-            torch.save(net.state_dict(), work_dir / 'cp' / 'best_test.pth')
-        else:
-            logging.info(f'Test: loss={test_loss:.6f}')
+            if test_loss < best_test_loss:
+                best_test_loss = test_loss
+                logging.info(f'Test: loss={best_test_loss:.6f} -> save model')
+                torch.save(net.state_dict(), work_dir / 'cp' / 'best_test.pth')
+            else:
+                logging.info(f'Test: loss={test_loss:.6f}')
 
-    sw.close()
-
-def train(net, train_dataset, criterion, optimizer):
+def train(net, dataset, criterion, optimizer):
     net.train()
 
-    train_loss = 0.0
+    avg_loss = 0.0
 
-    for i, (c, s, t) in enumerate(train_dataset):
-        c = c.to(g.device)
-        s = s.to(g.device)
-        t = t.to(g.device)
+    for i, (c, s, t) in enumerate(dataset):
+        c = c.to(g.device); s = s.to(g.device); t = t.to(g.device)
 
-        c_emb = net.style_enc(c)
-        s_emb = net.style_enc(s)
-        c_feat, c_code = net.content_enc(c, c_emb)
-        r = net.decoder(c_feat, s_emb)
-        q = r + net.postnet(r)
-        q_feat, q_code = net.content_enc(q, c_emb)
+        c_emb  = net.style_enc(c)
+        s_emb  = net.style_enc(s)
+        c_feat = net.content_enc(c, c_emb)
+        r      = net.decoder(c_feat, s_emb)
+        q      = r + net.postnet(r)
+        q_feat = net.content_enc(q, c_emb)
 
-        loss = criterion(c, s, t, r, q, c_code, q_code)
-        train_loss += loss.item()
+        loss = criterion(c, s, t, r, q, c_feat, q_feat)
+        avg_loss += loss.item()
 
         optimizer.zero_grad()
         loss.backward()
@@ -112,43 +109,42 @@ def train(net, train_dataset, criterion, optimizer):
 
         print(f'[Training: {i:03d}/{g.num_repeats:03d}] loss={loss.item():.6f}\033[K\033[G', end='')
 
-    train_loss /= g.num_repeats * g.batch_size
+    avg_loss /= g.num_repeats * g.batch_size
 
-    return train_loss
+    return avg_loss
 
-def test(net, test_dataset, criterion):
+def test(net, dataset, criterion):
     net.eval()
 
-    test_loss = 0.0
+    avg_loss = 0.0
 
-    for i, (c, s, t) in enumerate(test_dataset):
-        c = c.to(g.device)
-        s = s.to(g.device)
-        t = t.to(g.device)
+    for i, (c, s, t) in enumerate(dataset):
+        c = c.to(g.device); s = s.to(g.device); t = t.to(g.device)
 
-        c_emb = net.style_enc(c)
-        s_emb = net.style_enc(s)
-        c_feat, c_code = net.content_enc(c, c_emb)
-        r = net.decoder(c_feat, s_emb)
-        q = r + net.postnet(r)
-        q_feat, q_code = net.content_enc(q, c_emb)
+        c_emb  = net.style_enc(c)
+        s_emb  = net.style_enc(s)
+        c_feat = net.content_enc(c, c_emb)
+        r      = net.decoder(c_feat, s_emb)
+        q      = r + net.postnet(r)
+        q_feat = net.content_enc(q, c_emb)
 
-        loss = criterion(c, s, t, r, q, c_code, q_code)
-        test_loss += loss.item()
+        loss = criterion(c, s, t, r, q, c_feat, q_feat)
+        avg_loss += loss.item()
 
         print(f'[Testing: {i:03d}/{g.num_test_repeats:03d}]  loss={loss.item():.6f}\033[K\033[G', end='')
 
-    test_loss /= g.num_test_repeats * g.batch_size
+    avg_loss /= g.num_test_repeats * g.batch_size
 
-    return test_loss
+    return avg_loss
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('config_path', type=pathlib.Path)
-    parser.add_argument('--load_model_path', type=pathlib.Path)
+    parser.add_argument('--config_path',     type=pathlib.Path, default='config.yml')
+    parser.add_argument('--model_load_path', type=pathlib.Path)
+    parser.add_argument('--gpu',             type=int, default=0)
 
     args = [
-        'config.yaml'
+        '--gpu', '1',
     ]
 
     try:

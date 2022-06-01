@@ -7,7 +7,7 @@ class DoNothing(torch.nn.Module):
     def __init__(self):
         super(DoNothing, self).__init__()
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         return x
 
 def get_activation(name, **kwargs):
@@ -46,7 +46,7 @@ class Layer(torch.nn.Module):
         self.activation = get_activation(activation)
         torch.nn.init.xavier_uniform_(self.layer.weight, gain=torch.nn.init.calculate_gain(activation, param=activation_param))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         x = self.layer(x)
         x = self.bn(x)
         x = self.activation(x)
