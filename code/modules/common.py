@@ -1,22 +1,26 @@
 import logging
 import pathlib
 import shutil
-import sys
+
+import coloredlogs
 
 from modules import global_value as g
 
 
 def init_logger(
-        log_path: pathlib.Path,
-        mode='w',
-    ):
-    fmt = '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s: %(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=fmt, filename=log_path, filemode=mode)
+            log_path: pathlib.Path,
+            mode='w',
+):
+    logger = logging.getLogger('')
 
-    console = logging.StreamHandler(stream=sys.stdout)
-    console.setLevel(logging.DEBUG)
-    console.setFormatter(logging.Formatter(fmt))
-    logging.getLogger('').addHandler(console)
+    stdout_fmt  = '%(asctime)s %(levelname)s: %(message)s'
+    coloredlogs.install(level='DEBUG', logger=logger, fmt=stdout_fmt)
+
+    logflie_fmt = '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s: %(message)s'
+    handler = logging.FileHandler(log_path, mode=mode)
+    handler.setFormatter(logging.Formatter(logflie_fmt))
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
 
 def backup_codes(
         src_dir: pathlib.Path,

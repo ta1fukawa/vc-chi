@@ -68,7 +68,7 @@ def main(config_path, model_load_path=None, gpu=0):
             sw.add_scalars('loss', {'train': train_loss, 'test': test_loss}, epoch)
             sw.flush()
 
-            logging.info(f'[{epoch:03d}/{g.num_epochs:03d}] train_loss={train_loss:.6f}, test_loss={test_loss:.6f}')
+            logging.info(f'[{epoch:03d}/{g.num_epochs:03d}] TRAIN LOSS: {train_loss:.6f}, TEST LOSS: {test_loss:.6f}')
 
             if train_loss < best_train_loss:
                 best_train_loss = train_loss
@@ -77,6 +77,9 @@ def main(config_path, model_load_path=None, gpu=0):
             if test_loss < best_test_loss:
                 best_test_loss = best_test_loss
                 torch.save(net.state_dict(), work_dir / 'cp' / 'best_test.pth')
+
+    logging.info(f'BEST TRAIN LOSS: {best_train_loss:.6f}')
+    logging.info(f'BEST TEST LOSS: {best_test_loss:.6f}')
 
 def train(epoch, net, dataset, criterion, optimizer):
     net.train()
