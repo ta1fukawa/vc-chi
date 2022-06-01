@@ -62,29 +62,23 @@ def main(config_path, model_load_path=None, gpu=0):
 
     with torch.utils.tensorboard.SummaryWriter(work_dir / 'tboard') as sw:
         for epoch in range(g.num_epochs):
-            train_loss = train(net, train_dataset, criterion, optimizer)
-            test_loss  = test (net, test_dataset,  criterion)
+            train_loss = train(epoch, net, train_dataset, criterion, optimizer)
+            test_loss  = test (epoch, net, test_dataset,  criterion)
 
             sw.add_scalars('loss', {'train': train_loss, 'test': test_loss}, epoch)
             sw.flush()
 
-            logging.info(f'EPOCH: [{epoch:03d}/{g.num_epochs:03d}]')
+            logging.info(f'[{epoch:03d}/{g.num_epochs:03d}] train_loss={train_loss:.6f}, test_loss={test_loss:.6f}')
 
             if train_loss < best_train_loss:
                 best_train_loss = train_loss
-                logging.info(f'Train: loss={best_train_loss:.6f} -> save model')
                 torch.save(net.state_dict(), work_dir / 'cp' / 'best_train.pth')
-            else:
-                logging.info(f'Train: loss={train_loss:.6f}')
 
             if test_loss < best_test_loss:
-                best_test_loss = test_loss
-                logging.info(f'Test: loss={best_test_loss:.6f} -> save model')
+                best_test_loss = best_test_loss
                 torch.save(net.state_dict(), work_dir / 'cp' / 'best_test.pth')
-            else:
-                logging.info(f'Test: loss={test_loss:.6f}')
 
-def train(net, dataset, criterion, optimizer):
+def train(epoch, net, dataset, criterion, optimizer):
     net.train()
 
     avg_loss = 0.0
@@ -106,13 +100,14 @@ def train(net, dataset, criterion, optimizer):
         loss.backward()
         optimizer.step()
 
-        print(f'[Training: {i:03d}/{g.num_repeats:03d}] loss={loss.item():.6f}\033[K\033[G', end='')
+        print(f'[{epoch:03d}/{g.num_epochs:03d}] Training: {i:03d}/{g.num_repeats:03d} (loss={loss.item():.6f})\033[K\033[G', end='')
 
     avg_loss /= g.num_repeats * g.batch_size
 
     return avg_loss
 
-def test(net, dataset, criterion):
+
+def test(epoch, net, dataset, criterion):
     net.eval()
 
     avg_loss = 0.0
@@ -130,7 +125,7 @@ def test(net, dataset, criterion):
         loss = criterion(c, s, t, r, q, c_feat, q_feat)
         avg_loss += loss.item()
 
-        print(f'[Testing: {i:03d}/{g.num_test_repeats:03d}]  loss={loss.item():.6f}\033[K\033[G', end='')
+        print(f'[{epoch:03d}/{g.num_epochs:03d}] Testing: {i:03d}/{g.num_repeats:03d} (loss={loss.item():.6f})\033[K\033[G', end='')
 
     avg_loss /= g.num_test_repeats * g.batch_size
 
