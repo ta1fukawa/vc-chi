@@ -41,7 +41,12 @@ class Dataset(torch.utils.data.Dataset):
                     for speaker_idx, speech_idx in zip(speaker_idxes, speech_idxes)
                 ], dim=0)
 
-                yield data, data, data
+                emb = torch.stack([
+                    torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_idx].name}.pt')
+                    for speaker_idx in speaker_idxes
+                ], dim=0)
+
+                yield data, data, emb, emb
             else:
                 c_speech_idxes  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
                 c_speaker_idxes = np.random.choice(len(self.files), g.batch_size, replace=False)
