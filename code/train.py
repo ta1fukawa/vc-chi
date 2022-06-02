@@ -123,10 +123,11 @@ def model_validate(epoch, net, dataset, criterion):
     for i, (c, t, c_emb, s_emb) in enumerate(dataset):
         c = c.to(g.device); t = t.to(g.device)
 
-        c_feat = net.content_enc(c, c_emb)
-        r      = net.decoder(c_feat, s_emb)
-        q      = r + net.postnet(r)
-        q_feat = net.content_enc(q, c_emb)
+        with torch.no_grad():
+            c_feat = net.content_enc(c, c_emb)
+            r      = net.decoder(c_feat, s_emb)
+            q      = r + net.postnet(r)
+            q_feat = net.content_enc(q, c_emb)
 
         loss = criterion(c, t, r, q, c_feat, q_feat)
         avg_loss += loss.item()
@@ -146,10 +147,11 @@ def model_test(net, dataset, criterion):
     for i, (c, t, c_emb, s_emb) in enumerate(dataset):
         c = c.to(g.device); t = t.to(g.device)
 
-        c_feat = net.content_enc(c, c_emb)
-        r      = net.decoder(c_feat, s_emb)
-        q      = r + net.postnet(r)
-        q_feat = net.content_enc(q, c_emb)
+        with torch.no_grad():
+            c_feat = net.content_enc(c, c_emb)
+            r      = net.decoder(c_feat, s_emb)
+            q      = r + net.postnet(r)
+            q_feat = net.content_enc(q, c_emb)
 
         loss = criterion(c, t, r, q, c_feat, q_feat)
         avg_loss += loss.item()
@@ -169,9 +171,10 @@ def predict(net, source_speaker, target_speaker, speech):
     c_emb = torch.load(f'{g.emb_dir}/{source_speaker}.pt').unsqueeze(0).to(g.device)
     s_emb = torch.load(f'{g.emb_dir}/{target_speaker}.pt').unsqueeze(0).to(g.device)
 
-    c_feat = net.content_enc(c, c_emb)
-    r      = net.decoder(c_feat, s_emb)
-    q      = r + net.postnet(r)
+    with torch.no_grad():
+        c_feat = net.content_enc(c, c_emb)
+        r      = net.decoder(c_feat, s_emb)
+        q      = r + net.postnet(r)
 
     angle = torch.load(f'{g.agl_dir}/{target_speaker}/{speech}.pt').unsqueeze(0).to(g.device)
 

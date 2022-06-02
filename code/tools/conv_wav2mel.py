@@ -71,8 +71,8 @@ def main(config_path, encoder_path, gpu=0):
 
             wave, sr = torchaudio.load(str(wav))
             wave, sr = audio.norm_wave(wave, **config['norm_wave'])
-            mel, agl = audio.wave2mel(wave, sr, **config['mel_spec'])
-            
+            mel, agl = audio.wave2mel(wave, **config['mel_spec'])
+
             torch.save(mel, str(mel_dir / speaker.name / f'{wav.stem}.pt'))
             torch.save(agl, str(agl_dir / speaker.name / f'{wav.stem}.pt'))
 

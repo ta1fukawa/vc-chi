@@ -40,15 +40,19 @@ def save_spec_fig(c, t, r, q):
 
 
 def save_mel_wave(c, t, r, q, angle):
-    source_wave = mel2wave(c, angle, **g.mel_spec)
-    target_wave = mel2wave(t, angle, **g.mel_spec)
+    source_wave  = mel2wave(c, angle, **g.mel_spec)
+    target_wave  = mel2wave(t, angle, **g.mel_spec)
     predict_wave = mel2wave(q, angle, **g.mel_spec)
+
+    source_wave_  = source_wave.squeeze(0).detach().cpu().numpy()
+    target_wave_  = target_wave.squeeze(0).detach().cpu().numpy()
+    predict_wave_ = predict_wave.squeeze(0).detach().cpu().numpy()
 
     (g.work_dir / 'wav').mkdir(parents=True)
 
-    sf.write(str(g.work_dir / 'wav' / f'source.wav'),  source_wave,  g.mel_spec['sample_rate'])
-    sf.write(str(g.work_dir / 'wav' / f'target.wav'),  target_wave,  g.mel_spec['sample_rate'])
-    sf.write(str(g.work_dir / 'wav' / f'predict.wav'), predict_wave, g.mel_spec['sample_rate'])
+    sf.write(str(g.work_dir / 'wav' / f'source.wav'),  source_wave_,  g.mel_spec['sample_rate'])
+    sf.write(str(g.work_dir / 'wav' / f'target.wav'),  target_wave_,  g.mel_spec['sample_rate'])
+    sf.write(str(g.work_dir / 'wav' / f'predict.wav'), predict_wave_, g.mel_spec['sample_rate'])
 
 
 def norm_wave(wave, sample_rate, norm_db, sil_threshold, sil_duration, preemph):
@@ -129,26 +133,3 @@ def mel2embed(mels, encoder, seg_len):
 
     embed = torch.mean(embeds, dim=0)
     return embed
-
-
-def mel2wave(mel, angle, sample_rate, fft_window_ms, fft_hop_ms, n_fft, f_min, n_mels, ref_db, dc_db):
-    mel = mel * (dc_db - ref_db) + ref_db
-    mel = 10**(mel / 20)
-
-    spec = torchaudio.transforms.InverseMelScale(
-        n_stft=n_fft // 2 + 1,
-        n_mels=n_mels,
-        sample_rate=sample_rate,
-        f_min=f_min,
-    ).to(g.device)(mel.transpose(1, 2))
-
-    angle = angle[:, :spec.shape[1]].transpose(1, 2)
-    spec = spec * torch.cos(angle) + 1j * spec * torch.sin(angle)
-    
-    wave = torchaudio.transforms.InverseSpectrogram(
-        n_fft=n_fft,
-        win_length=int(sample_rate * fft_window_ms / 1000),
-        hop_length=int(sample_rate * fft_hop_ms    / 1000),
-    ).to(g.device)(spec)
-
-    return wave

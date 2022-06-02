@@ -31,7 +31,7 @@ tests_dataset:
   speech_start  : 90
   speech_end    : 100
 
-use_same_speaker : false
+use_same_speaker : true
 
 mel_dir : './dataset/jvs/mel'
 agl_dir : './dataset/jvs/agl'
