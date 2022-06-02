@@ -35,7 +35,6 @@ def main(config_path, model_load_path=None, gpu=0):
 
     if gpu >= 0:
         assert torch.cuda.is_available()
-        # torch.set_default_tensor_type('torch.cuda.FloatTensor')
         g.device = torch.device(f'cuda:{gpu}')
     else:
         g.device = torch.device('cpu')

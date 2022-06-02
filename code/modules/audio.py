@@ -140,7 +140,7 @@ def mel2wave(mel, angle, sample_rate, fft_window_ms, fft_hop_ms, n_fft, f_min, n
         n_mels=n_mels,
         sample_rate=sample_rate,
         f_min=f_min,
-    )(mel.transpose(1, 2))
+    ).to(g.device)(mel.transpose(1, 2))
 
     angle = angle[:, :spec.shape[1]].transpose(1, 2)
     spec = spec * torch.cos(angle) + 1j * spec * torch.sin(angle)
@@ -149,6 +149,6 @@ def mel2wave(mel, angle, sample_rate, fft_window_ms, fft_hop_ms, n_fft, f_min, n
         n_fft=n_fft,
         win_length=int(sample_rate * fft_window_ms / 1000),
         hop_length=int(sample_rate * fft_hop_ms    / 1000),
-    )(spec)
+    ).to(g.device)(spec)
 
     return wave
