@@ -20,11 +20,12 @@ train_dataset:
 valdt_dataset:
   num_repeats   : 20
   speaker_start : 80
-  speaker_end   : 100
+  speaker_end   : 90
   speech_start  : 80
-  speech_end    : 100
+  speech_end    : 90
 
 tests_dataset:
+  num_repeats   : 1
   speaker_start : 90
   speaker_end   : 100
   speech_start  : 90
@@ -32,4 +33,21 @@ tests_dataset:
 
 use_same_speaker : false
 
-mel_path : '/home/g2181479/vc-beta/vc3/mel-jvs'
+mel_dir : './dataset/jvs/mel'
+agl_dir : './dataset/jvs/agl'
+emb_dir : './dataset/jvs/emb'
+
+predict:
+  source_speaker : 'jvs091'
+  target_speaker : 'jvs092'
+  speech         : 'VOICEACTRESS100_091'
+
+mel_spec:
+  sample_rate   : 24000
+  fft_window_ms : 50.0
+  fft_hop_ms    : 12.5
+  n_fft         : 2048
+  f_min         : 50.0
+  n_mels        : 80
+  ref_db        : 20.0
+  dc_db         : 100.0

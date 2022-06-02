@@ -9,8 +9,9 @@ class Dataset(torch.utils.data.Dataset):
         self.use_same_speaker = use_same_speaker
         self.num_repeats = num_repeats
 
-        speakers = sorted(list(pathlib.Path(g.mel_path).glob('*')))
+        speakers = sorted(list(pathlib.Path(g.mel_dir).glob('*')))
         speakers = speakers[speaker_start:speaker_end]
+        self.speakers = speakers
 
         self.files = []
         for speaker in speakers:
@@ -43,7 +44,6 @@ class Dataset(torch.utils.data.Dataset):
                 yield data, data, data
             else:
                 c_speech_idxes  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
-                s_speech_idxes  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
                 c_speaker_idxes = np.random.choice(len(self.files), g.batch_size, replace=False)
                 s_speaker_idxes = np.random.choice(len(self.files), g.batch_size, replace=False)
 
@@ -51,13 +51,18 @@ class Dataset(torch.utils.data.Dataset):
                     self.padding(torch.load(self.files[speaker_idx][speech_idx]))
                     for speaker_idx, speech_idx in zip(c_speaker_idxes, c_speech_idxes)
                 ], dim=0)
-                s_data = torch.stack([
-                    self.padding(torch.load(self.files[speaker_idx][speech_idx]))
-                    for speaker_idx, speech_idx in zip(s_speaker_idxes, s_speech_idxes)
-                ], dim=0)
                 t_data = torch.stack([
                     self.padding(torch.load(self.files[speaker_idx][speech_idx]))
                     for speaker_idx, speech_idx in zip(s_speaker_idxes, c_speech_idxes)
                 ], dim=0)
+
+                c_emb = torch.stack([
+                    torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_idx].name}.pt')
+                    for speaker_idx in c_speaker_idxes
+                ], dim=0)
+                s_emb = torch.stack([
+                    torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_idx].name}.pt')
+                    for speaker_idx in s_speaker_idxes
+                ], dim=0)
                 
-                yield c_data, s_data, t_data
+                yield c_data, t_data, c_emb, s_emb
