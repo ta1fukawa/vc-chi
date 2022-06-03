@@ -87,6 +87,13 @@ def main(config_path, gpu=0):
 
                 if epoch == g.change_optimizer_epoch:
                     torch.load(g.work_dir / 'cp' / 'best_valdt.pth', map_location=g.device)
+
+                    tests_loss = model_test(net, tests_dataset, criterion)
+
+                    print(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}')
+                    print(f'BEST VALIDATE LOSS: {best_valdt_loss["loss"]:.6f}')
+                    print(f'TEST LOSS: {tests_loss["loss"]:.6f}')
+
                     optimizer = torch.optim.SGD(net.parameters(), lr=g.lr)
                     logging.debug(f'CHANGE OPTIMIZER: {optimizer}')
 
@@ -96,7 +103,7 @@ def main(config_path, gpu=0):
                 logging.debug(f'TRAIN LOSSES: {train_loss}')
                 logging.debug(f'VALIDATE LOSSES: {valdt_loss}')
 
-                print(f'[{epoch:03d}/{g.num_epochs:03d}] TRAIN LOSS: {train_loss["loss"]:.6f}, VALIDATE LOSS: {valdt_loss["loss"]:.6f}')
+                print(f'[{epoch + 1:03d}/{g.num_epochs:03d}] TRAIN LOSS: {train_loss["loss"]:.6f}, VALIDATE LOSS: {valdt_loss["loss"]:.6f}')
 
                 if train_loss['loss'] < best_train_loss['loss']:
                     best_train_loss = train_loss
@@ -147,7 +154,7 @@ def model_train(epoch, net, dataset, criterion, optimizer):
         loss.backward()
         optimizer.step()
 
-        print(f'[{epoch:03d}/{g.num_epochs:03d}] Training: {i:03d}/{g.train_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
+        print(f'[{epoch + 1:03d}/{g.num_epochs:03d}] Training: {i + 1:03d}/{g.train_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
 
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
@@ -174,7 +181,7 @@ def model_validate(epoch, net, dataset, criterion):
 
         loss, losses = criterion(c, t, r, q, c_feat, q_feat)
 
-        print(f'[{epoch:03d}/{g.num_epochs:03d}] Validate: {i:03d}/{g.valdt_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
+        print(f'[{epoch + 1:03d}/{g.num_epochs:03d}] Validate: {i + 1:03d}/{g.valdt_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
 
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
@@ -201,7 +208,7 @@ def model_test(net, dataset, criterion):
 
         loss, losses = criterion(c, t, r, q, c_feat, q_feat)
 
-        print(f'Testing: {i:03d}/{g.tests_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
+        print(f'Testing: {i + 1:03d}/{g.tests_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
 
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
