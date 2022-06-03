@@ -86,8 +86,9 @@ def main(config_path, gpu=0):
                 logging.debug(f'EPOCH: {epoch}')
 
                 if epoch == g.change_optimizer_epoch:
+                    torch.load(g.work_dir / 'cp' / 'best_valdt.pth', map_location=g.device)
                     optimizer = torch.optim.SGD(net.parameters(), lr=g.lr)
-                    logging.info(f'CHANGE OPTIMIZER: {optimizer}')
+                    logging.debug(f'CHANGE OPTIMIZER: {optimizer}')
 
                 train_loss = model_train   (epoch, net, train_dataset, criterion, optimizer)
                 valdt_loss = model_validate(epoch, net, valdt_dataset, criterion)
