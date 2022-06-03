@@ -79,16 +79,15 @@ def main(config_path, gpu=0):
 
         (g.work_dir / 'cp').mkdir(parents=True)
 
-        best_train_loss = best_valdt_loss = float('inf')
+        best_train_loss = best_valdt_loss = {'loss': float('inf')}
 
         with torch.utils.tensorboard.SummaryWriter(g.work_dir / 'tboard') as sw:
             for epoch in range(g.num_epochs):
+                logging.debug(f'EPOCH: {epoch}')
 
                 if epoch == g.change_optimizer_epoch:
                     optimizer = torch.optim.SGD(net.parameters(), lr=g.lr)
                     logging.info(f'CHANGE OPTIMIZER: {optimizer}')
-
-                logging.debug(f'EPOCH: {epoch}')
 
                 train_loss = model_train   (epoch, net, train_dataset, criterion, optimizer)
                 valdt_loss = model_validate(epoch, net, valdt_dataset, criterion)
@@ -96,30 +95,34 @@ def main(config_path, gpu=0):
                 logging.debug(f'TRAIN LOSSES: {train_loss}')
                 logging.debug(f'VALIDATE LOSSES: {valdt_loss}')
 
+                print(f'[{epoch:03d}/{g.num_epochs:03d}] TRAIN LOSS: {train_loss["loss"]:.6f}, VALIDATE LOSS: {valdt_loss["loss"]:.6f}')
+
+                if train_loss['loss'] < best_train_loss['loss']:
+                    best_train_loss = train_loss
+                    torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_train.pth')
+                    logging.debug(f'SAVE BEST TRAIN MODEL: {g.work_dir / "cp" / "best_train.pth"}')
+
+                if valdt_loss['loss'] < best_valdt_loss['loss']:
+                    best_valdt_loss = valdt_loss
+                    torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_valdt.pth')
+                    logging.debug(f'SAVE BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
+
                 sw.add_scalars('train', train_loss, epoch)
                 sw.add_scalars('valdt', valdt_loss, epoch)
                 sw.flush()
-
-                logging.info(f'[{epoch:03d}/{g.num_epochs:03d}] TRAIN LOSS: {train_loss["loss"]:.6f}, VALIDATE LOSS: {valdt_loss["loss"]:.6f}')
-
-                if train_loss['loss'] < best_train_loss:
-                    best_train_loss = train_loss['loss']
-                    torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_train.pth')
-
-                if valdt_loss['loss'] < best_valdt_loss:
-                    best_valdt_loss = valdt_loss['loss']
-                    torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_valdt.pth')
 
         torch.save(net.state_dict(), g.work_dir / 'cp' / 'final.pth')
         torch.load(g.work_dir / 'cp' / 'best_valdt.pth', map_location=g.device)
 
         tests_loss = model_test(net, tests_dataset, criterion)
 
-        logging.debug(f'TEST LOSSES: {tests_loss}')
+        logging.debug(f'BEST TRAIN LOSSES: {best_train_loss}')
+        logging.debug(f'BEST VALDT LOSSES: {best_valdt_loss}')
+        logging.debug(f'TESTS LOSSES: {tests_loss}')
 
-        logging.info(f'BEST TRAIN LOSS: {best_train_loss:.6f}')
-        logging.info(f'BEST VALIDATE LOSS: {best_valdt_loss:.6f}')
-        logging.info(f'TEST LOSS: {tests_loss["loss"]:.6f}')
+        print(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}')
+        print(f'BEST VALIDATE LOSS: {best_valdt_loss["loss"]:.6f}')
+        print(f'TEST LOSS: {tests_loss["loss"]:.6f}')
 
     predict(net, **g.predict)
 
