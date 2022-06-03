@@ -74,68 +74,67 @@ def main(config_path, gpu=0):
 
             return loss, losses
 
-        optimizer = torch.optim.Adam(net.parameters(), lr=g.lr)
-        logging.debug(f'SET OPTIMIZER: {optimizer}')
-
         (g.work_dir / 'cp').mkdir(parents=True)
 
         best_train_loss = best_valdt_loss = {'loss': float('inf')}
 
         with torch.utils.tensorboard.SummaryWriter(g.work_dir / 'tboard') as sw:
-            for epoch in range(g.num_epochs):
-                logging.debug(f'EPOCH: {epoch}')
+            total_epoch = 0
+            
+            for stage in g.stages:
+                logging.info(f'STAGE: {stage}')
 
-                if epoch == g.change_optimizer_epoch:
-                    torch.load(g.work_dir / 'cp' / 'best_valdt.pth', map_location=g.device)
+                if stage['optimizer'] == 'adam':
+                    optimizer = torch.optim.Adam(net.parameters(), lr=stage['lr'])
+                elif stage['optimizer'] == 'sgd':
+                    optimizer = torch.optim.SGD(net.parameters(), lr=stage['lr'], momentum=stage['momentum'])
+                logging.debug(f'SET OPTIMIZER: {optimizer}')
 
-                    tests_loss = model_test(net, tests_dataset, criterion)
+                patience = 0
 
-                    print(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}')
-                    print(f'BEST VALIDATE LOSS: {best_valdt_loss["loss"]:.6f}')
-                    print(f'TEST LOSS: {tests_loss["loss"]:.6f}')
+                for epoch in range(stage['num_epochs']):
+                    logging.info(f'EPOCH: {epoch + 1} (TOTAL: {total_epoch + 1})')
 
-                    optimizer = torch.optim.SGD(net.parameters(), lr=g.lr)
-                    logging.debug(f'CHANGE OPTIMIZER: {optimizer}')
+                    train_loss = model_train   (net, train_dataset, criterion, optimizer)
+                    valdt_loss = model_validate(net, valdt_dataset, criterion)
 
-                train_loss = model_train   (epoch, net, train_dataset, criterion, optimizer)
-                valdt_loss = model_validate(epoch, net, valdt_dataset, criterion)
+                    logging.info(f'TRAIN LOSS: {train_loss["loss"]:.6f}, VALDT LOSS: {valdt_loss["loss"]:.6f}')
 
-                logging.debug(f'TRAIN LOSSES: {train_loss}')
-                logging.debug(f'VALIDATE LOSSES: {valdt_loss}')
+                    if train_loss['loss'] < best_train_loss['loss']:
+                        best_train_loss = train_loss
+                        torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_train.pth')
+                        logging.debug(f'SAVE BEST TRAIN MODEL: {g.work_dir / "cp" / "best_train.pth"}')
 
-                print(f'[{epoch + 1:03d}/{g.num_epochs:03d}] TRAIN LOSS: {train_loss["loss"]:.6f}, VALIDATE LOSS: {valdt_loss["loss"]:.6f}')
+                    if valdt_loss['loss'] < best_valdt_loss['loss']:
+                        best_valdt_loss = valdt_loss
+                        torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_valdt.pth')
+                        logging.debug(f'SAVE BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
 
-                if train_loss['loss'] < best_train_loss['loss']:
-                    best_train_loss = train_loss
-                    torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_train.pth')
-                    logging.debug(f'SAVE BEST TRAIN MODEL: {g.work_dir / "cp" / "best_train.pth"}')
+                        patience = 0
+                    else:
+                        patience += 1
 
-                if valdt_loss['loss'] < best_valdt_loss['loss']:
-                    best_valdt_loss = valdt_loss
-                    torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_valdt.pth')
-                    logging.debug(f'SAVE BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
+                    if patience >= stage['patience']:
+                        logging.info(f'EARLY STOPPING: {patience}')
+                        break
 
-                sw.add_scalars('train', train_loss, epoch)
-                sw.add_scalars('valdt', valdt_loss, epoch)
-                sw.flush()
+                    sw.add_scalars('train', train_loss, epoch)
+                    sw.add_scalars('valdt', valdt_loss, epoch)
+                    sw.flush()
 
-        torch.save(net.state_dict(), g.work_dir / 'cp' / 'final.pth')
-        torch.load(g.work_dir / 'cp' / 'best_valdt.pth', map_location=g.device)
+                    total_epoch += 1
 
-        tests_loss = model_test(net, tests_dataset, criterion)
+                torch.save(net.state_dict(), g.work_dir / 'cp' / 'final.pth')
+                torch.load(g.work_dir / 'cp' / 'best_valdt.pth', map_location=g.device)
 
-        logging.debug(f'BEST TRAIN LOSSES: {best_train_loss}')
-        logging.debug(f'BEST VALDT LOSSES: {best_valdt_loss}')
-        logging.debug(f'TESTS LOSSES: {tests_loss}')
+                tests_loss = model_test(net, tests_dataset, criterion)
 
-        print(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}')
-        print(f'BEST VALIDATE LOSS: {best_valdt_loss["loss"]:.6f}')
-        print(f'TEST LOSS: {tests_loss["loss"]:.6f}')
+                logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, TEST LOSS: {tests_loss["loss"]:.6f}')
 
     predict(net, **g.predict)
 
 
-def model_train(epoch, net, dataset, criterion, optimizer):
+def model_train(net, dataset, criterion, optimizer):
     net.train()
 
     avg_losses = {}
@@ -154,18 +153,22 @@ def model_train(epoch, net, dataset, criterion, optimizer):
         loss.backward()
         optimizer.step()
 
-        print(f'[{epoch + 1:03d}/{g.num_epochs:03d}] Training: {i + 1:03d}/{g.train_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
-
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
+
+        print(f'Training: {i + 1:03d}/{g.train_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
+    
+    print('\033[K\033[G', end='')
 
     for k, v in avg_losses.items():
         avg_losses[k] /= g.train_dataset['num_repeats'] * g.batch_size
 
+    logging.debug(f'TRAIN LOSSES: {avg_losses}')
+
     return avg_losses
 
 
-def model_validate(epoch, net, dataset, criterion):
+def model_validate(net, dataset, criterion):
     net.eval()
 
     avg_losses = {}
@@ -181,13 +184,17 @@ def model_validate(epoch, net, dataset, criterion):
 
         loss, losses = criterion(c, t, r, q, c_feat, q_feat)
 
-        print(f'[{epoch + 1:03d}/{g.num_epochs:03d}] Validate: {i + 1:03d}/{g.valdt_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
-
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
-    
+
+        print(f'Validate: {i + 1:03d}/{g.valdt_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
+
+    print('\033[K\033[G', end='')
+
     for k, v in avg_losses.items():
         avg_losses[k] /= g.valdt_dataset['num_repeats'] * g.batch_size
+
+    logging.debug(f'VALIDATE LOSSES: {avg_losses}')
 
     return avg_losses
 
@@ -208,13 +215,17 @@ def model_test(net, dataset, criterion):
 
         loss, losses = criterion(c, t, r, q, c_feat, q_feat)
 
-        print(f'Testing: {i + 1:03d}/{g.tests_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
-
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
+
+        print(f'Testing: {i + 1:03d}/{g.tests_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
+
+    print('\033[K\033[G', end='')
         
     for k, v in avg_losses.items():
         avg_losses[k] /= g.tests_dataset['num_repeats'] * g.batch_size
+
+    logging.debug(f'TEST LOSSES: {avg_losses}')
 
     return avg_losses
 
