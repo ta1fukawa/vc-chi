@@ -18,24 +18,24 @@ def save_spec_fig(c, t, r, q):
     r = r.squeeze(0).detach().cpu().numpy()
     q = q.squeeze(0).detach().cpu().numpy()
 
-    c, t, r, q = (([c, t, r, q] - np.min(t) + 1e-8) / np.max(t) * 255).astype(np.int32)
+    # c, t, r, q = (([c, t, r, q] - np.min(t) + 1e-8) / np.max(t) * 255).astype(np.int32)
 
     (g.work_dir / 'spec').mkdir(parents=True)
 
     plt.figure(figsize=(10, 6))
-    plt.imshow(c.T[::-1], cmap='hot')
+    plt.imshow(c.T[::-1], cmap='magma', vmin=g.spec_fig['min_db'], vmax=g.spec_fig['max_db'])
     plt.savefig(str(g.work_dir / 'spec' / 'source_content.png'))
 
     plt.figure(figsize=(10, 6))
-    plt.imshow(t.T[::-1], cmap='hot')
+    plt.imshow(t.T[::-1], cmap='magma', vmin=g.spec_fig['min_db'], vmax=g.spec_fig['max_db'])
     plt.savefig(str(g.work_dir / 'spec' / 'target_content.png'))
 
     plt.figure(figsize=(10, 6))
-    plt.imshow(r.T[::-1], cmap='hot')
+    plt.imshow(r.T[::-1], cmap='magma', vmin=g.spec_fig['min_db'], vmax=g.spec_fig['max_db'])
     plt.savefig(str(g.work_dir / 'spec' / 'predict_before.png'))
 
     plt.figure(figsize=(10, 6))
-    plt.imshow(q.T[::-1], cmap='hot')
+    plt.imshow(q.T[::-1], cmap='magma', vmin=g.spec_fig['min_db'], vmax=g.spec_fig['max_db'])
     plt.savefig(str(g.work_dir / 'spec' / 'predict_after.png'))
 
 
