@@ -83,36 +83,40 @@ def wave2mel(wave, sample_rate, fft_window_ms, fft_hop_ms, n_fft, f_min, n_mels,
         win_length=int(sample_rate * fft_window_ms / 1000),
         hop_length=int(sample_rate * fft_hop_ms / 1000),
         power=None,
-    )(wave)
-    angle = torch.angle(spec)[0].T
-    spec = torch.abs(spec)**2
+    ).to(g.device)(wave)
+    radii = torch.abs(spec)
+    angle = torch.angle(spec)
 
     mel = torchaudio.transforms.MelScale(
         n_mels=n_mels,
         sample_rate=sample_rate,
         f_min=f_min,
         n_stft=n_fft // 2 + 1,
-    )(spec).squeeze(0).T
+    ).to(g.device)(radii)
 
     mel = 20 * torch.log10(torch.clamp(mel, min=1e-9))
     mel = (mel - ref_db) / (dc_db - ref_db)
 
+    mel   = mel.squeeze(0).T
+    angle = angle.squeeze(0).T
     return mel, angle
 
 
 def mel2wave(mel, angle, sample_rate, fft_window_ms, fft_hop_ms, n_fft, f_min, n_mels, ref_db, dc_db):
+    mel   = mel.T.unsqueeze(0)
+    angle = angle.T.unsqueeze(0)
+
     mel = mel * (dc_db - ref_db) + ref_db
     mel = 10**(mel / 20)
 
-    spec = torchaudio.transforms.InverseMelScale(
+    radii = torchaudio.transforms.InverseMelScale(
         n_stft=n_fft // 2 + 1,
         n_mels=n_mels,
         sample_rate=sample_rate,
         f_min=f_min,
-    ).to(g.device)(mel.transpose(1, 2))
+    ).to(g.device)(mel)
 
-    angle = angle[:, :spec.shape[1]].transpose(1, 2)
-    spec = spec * torch.cos(angle) + 1j * spec * torch.sin(angle)
+    spec = radii * torch.exp(1j * angle[:, :radii.shape[1]])
 
     wave = torchaudio.transforms.InverseSpectrogram(
         n_fft=n_fft,
