@@ -18,8 +18,6 @@ def save_spec_fig(c, t, r, q):
     r = r.squeeze(0).detach().cpu().numpy()
     q = q.squeeze(0).detach().cpu().numpy()
 
-    # c, t, r, q = (([c, t, r, q] - np.min(t) + 1e-8) / np.max(t) * 255).astype(np.int32)
-
     (g.work_dir / 'spec').mkdir(parents=True)
 
     plt.figure(figsize=(10, 6))
@@ -40,9 +38,9 @@ def save_spec_fig(c, t, r, q):
 
 
 def save_mel_wave(c, t, r, q, angle):
-    source_wave  = mel2wave(c[0], angle[0], **g.mel_spec)
-    target_wave  = mel2wave(t[0], angle[0], **g.mel_spec)
-    predict_wave = mel2wave(q[0], angle[0], **g.mel_spec)
+    source_wave  = mel2wave(c[0], angle[0], ver=2, **g.mel_spec)
+    target_wave  = mel2wave(t[0], angle[0], ver=2, **g.mel_spec)
+    predict_wave = mel2wave(q[0], angle[0], ver=2, **g.mel_spec)
 
     source_wave_  = source_wave.squeeze(0).detach().cpu().numpy()
     target_wave_  = target_wave.squeeze(0).detach().cpu().numpy()
@@ -80,7 +78,15 @@ def wave2mel(wave, sample_rate, fft_window_ms, fft_hop_ms, n_fft, f_min, n_mels,
     return mel, angle
 
 
-def mel2wave(mel, angle, sample_rate, fft_window_ms, fft_hop_ms, n_fft, f_min, n_mels, ref_db, dc_db):
+def mel2wave(mel, angle, ver=1, **kwargs):
+    if ver == 1:
+        wave = mel2wave_v1(mel, angle, **kwargs)
+    elif ver == 2:
+        wave = mel2wave_v2(mel, **kwargs)
+    return wave
+
+
+def mel2wave_v1(mel, angle, sample_rate, fft_window_ms, fft_hop_ms, n_fft, f_min, n_mels, ref_db, dc_db):
     mel   = mel.T.unsqueeze(0)
     angle = angle.T.unsqueeze(0)
 
@@ -101,6 +107,23 @@ def mel2wave(mel, angle, sample_rate, fft_window_ms, fft_hop_ms, n_fft, f_min, n
         win_length=int(sample_rate * fft_window_ms / 1000),
         hop_length=int(sample_rate * fft_hop_ms / 1000),
     ).to(g.device)(spec)
+
+    return wave
+
+
+def mel2wave_v2(mel, sample_rate, fft_window_ms, fft_hop_ms, n_fft, f_min, n_mels, ref_db, dc_db):
+    if not hasattr(g, 'waveglow'):
+        # g.waveglow = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_waveglow', model_math='fp32')
+        # g.waveglow = g.waveglow.remove_weightnorm(g.waveglow)
+        # g.waveglow = g.waveglow.to('cuda')
+        # g.waveglow.eval()
+        g.waveglow = torchaudio.pipelines.TACOTRON2_WAVERNN_PHONE_LJSPEECH.get_vocoder().to(g.device)
+
+    mel = mel.T.unsqueeze(0)
+
+    with torch.no_grad():
+        # wave = g.waveglow.infer(mel)
+        wave, _ = g.waveglow(mel, mel.shape)
 
     return wave
 
