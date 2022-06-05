@@ -81,6 +81,8 @@ def main(config_path, encoder_path, gpu=0):
             emb = audio.mel2embed(speaker_mels, emb_encoder, **config['mel2embed'])
             torch.save(emb, str(emb_dir / f'{speaker.name}.pt'))
 
+    print()
+
 
 def pad_seq(mel, seg_len):
     if len(mel) < seg_len:

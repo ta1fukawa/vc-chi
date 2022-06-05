@@ -42,10 +42,7 @@ def main(config_path, gpu=0):
         g.device = torch.device('cpu')
 
     net = model.Net().to(g.device)
-
-    torchinfo.summary(net, input_size=(1, g.n_fft // 2 + 1, g.n_mels))
-    with (g.work_dir / 'net.txt').open('w') as f:
-        f.write(repr(torchinfo.summary(net, input_size=(1, g.n_fft // 2 + 1, g.n_mels))))
+    logging.debug(f'MODEL: {net}')
     
     if g.model_load_path is not None:
         net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))

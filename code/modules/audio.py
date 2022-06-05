@@ -40,9 +40,9 @@ def save_spec_fig(c, t, r, q):
 
 
 def save_mel_wave(c, t, r, q, angle):
-    source_wave  = mel2wave(c, angle, **g.mel_spec)
-    target_wave  = mel2wave(t, angle, **g.mel_spec)
-    predict_wave = mel2wave(q, angle, **g.mel_spec)
+    source_wave  = mel2wave(c[0], angle[0], **g.mel_spec)
+    target_wave  = mel2wave(t[0], angle[0], **g.mel_spec)
+    predict_wave = mel2wave(q[0], angle[0], **g.mel_spec)
 
     source_wave_  = source_wave.squeeze(0).detach().cpu().numpy()
     target_wave_  = target_wave.squeeze(0).detach().cpu().numpy()
@@ -53,28 +53,6 @@ def save_mel_wave(c, t, r, q, angle):
     sf.write(str(g.work_dir / 'wav' / f'source.wav'),  source_wave_,  g.mel_spec['sample_rate'])
     sf.write(str(g.work_dir / 'wav' / f'target.wav'),  target_wave_,  g.mel_spec['sample_rate'])
     sf.write(str(g.work_dir / 'wav' / f'predict.wav'), predict_wave_, g.mel_spec['sample_rate'])
-
-
-def norm_wave(wave, sample_rate, norm_db, sil_threshold, sil_duration, preemph):
-    effects = [
-        ['channels', '1'],
-        ['rate', f'{sample_rate}'],
-        ['norm', f'{norm_db}'],
-        [
-            'silence',
-            '1',
-            f'{sil_duration}',
-            f'{sil_threshold}%',
-            '-1',
-            f'{sil_duration}',
-            f'{sil_threshold}%',
-        ],
-    ]
-
-    wave, sample_rate = torchaudio.sox_effects.apply_effects_tensor(wave, sample_rate, effects)
-    wave = torch.cat([wave[:, 0].unsqueeze(-1), wave[:, 1:] - preemph * wave[:, :-1]], dim=-1)
-
-    return wave, sample_rate
 
 
 def wave2mel(wave, sample_rate, fft_window_ms, fft_hop_ms, n_fft, f_min, n_mels, ref_db, dc_db):
@@ -116,7 +94,7 @@ def mel2wave(mel, angle, sample_rate, fft_window_ms, fft_hop_ms, n_fft, f_min, n
         f_min=f_min,
     ).to(g.device)(mel)
 
-    spec = radii * torch.exp(1j * angle[:, :radii.shape[1]])
+    spec = radii * torch.exp(1j * angle[:, :, :radii.size(2)])
 
     wave = torchaudio.transforms.InverseSpectrogram(
         n_fft=n_fft,
