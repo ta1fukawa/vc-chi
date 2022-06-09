@@ -250,10 +250,24 @@ def predict(net, source_speaker, target_speaker, speech):
         r      = net.decoder(c_feat, s_emb)
         q      = r + net.postnet(r)
 
-    angle = torch.load(f'{g.agl_dir}/{target_speaker}/{speech}.pt').unsqueeze(0).to(g.device)
+    c = c.squeeze(0).cpu().numpy()
+    t = t.squeeze(0).cpu().numpy()
+    r = r.squeeze(0).cpu().numpy()
+    q = q.squeeze(0).cpu().numpy()
 
-    if g.gen_spec_fig: audio.save_spec_fig(c, t, r, q)
-    if g.gen_mel_wave: audio.save_mel_wave(c, t, r, q, angle)
+    if g.gen_spec_fig:
+        (g.work_dir / 'img').mkdir(parents=True, exist_ok=True)
+        audio.save_mel_img(c, g.work_dir / 'img' / 'source.png')
+        audio.save_mel_img(t, g.work_dir / 'img' / 'target.png')
+        audio.save_mel_img(r, g.work_dir / 'img' / 'rec_before.png')
+        audio.save_mel_img(q, g.work_dir / 'img' / 'rec_after.png')
+
+    if g.gen_mel_wave:
+        (g.work_dir / 'wav').mkdir(parents=True, exist_ok=True)
+        audio.save_wav(audio.mel2wave_waveglow(c), g.work_dir / 'wav' / 'source.wav')
+        audio.save_wav(audio.mel2wave_waveglow(t), g.work_dir / 'wav' / 'target.wav')
+        audio.save_wav(audio.mel2wave_waveglow(r), g.work_dir / 'wav' / 'rec_before.wav')
+        audio.save_wav(audio.mel2wave_waveglow(q), g.work_dir / 'wav' / 'rec_after.wav')
 
 
 if __name__ == '__main__':

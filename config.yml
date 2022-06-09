@@ -1,6 +1,6 @@
 use_same_speaker : true
-no_train         : true
-model_load_path  : 'wd/apple/202206/05/101857/cp/best_train.pth'
+no_train         : false
+model_load_path  : null
 gen_spec_fig     : true
 gen_mel_wave     : true
 
@@ -10,8 +10,8 @@ style_dim   : 256
 dim_neck    : 32
 lstm_stride : 8
 
-log_interval   : 100
-batch_size     : 8
+log_interval : 100
+batch_size   : 8
 
 stages:
   -
@@ -52,7 +52,6 @@ tests_dataset:
 
 wav_dir : './dataset/jvs/wav'
 mel_dir : './dataset/jvs/mel'
-agl_dir : './dataset/jvs/agl'
 emb_dir : './dataset/jvs/emb'
 
 predict:
@@ -70,39 +69,43 @@ mel_spec:
   ref_db        : 20.0
   dc_db         : 100.0
 
-spec_fig:
-  min_db : -1.75
-  max_db : 0.75
-
-
-# Wavenet
-sample_rate     : 22050
 highpass_cutoff : 70.0
-fft_size        : 1024
-hop_size        : 256
-win_length      : 1024
-window          : 'hann'
-num_mels        : 80
-fmin            : 125
-fmax            : 7600
 
-log_scale_min : -16.0
+# wave -> mel settings
+sample_rate : 22050
+fft_size    : 1024
+num_mels    : 80
+fmin        : 0     # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
+fmax        : 8000  # To be increased/reduced depending on data.
+hop_size    : 256
+win_length  : 1024
+window      : 'hann'
 
-# Wavenet model
-wavenet_model:
-  out_channels : 30  # num_mixture * 3 (pi, mean, log_scale)
-  layers       : 24
-  stacks       : 4
-  residual_channels : 128
-  gate_channels : 256
-  skip_out_channels : 128
-  kernel_size : 3
-  dropout : 0.0
+# sample_rate : 24000
+# fft_size    : 2048
+# num_mels    : 80
+# fmin        : 80     # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
+# fmax        : 7600  # To be increased/reduced depending on data.
+# hop_size    : 300
+# win_length  : 1200
+# window      : 'hann'
 
-  cin_channels : 80
-  gin_channels : -1
-  n_speakers : -1  # 7 for CMU ARCTIC
-  weight_normalization : true
-  upsample_conditional_features : true
-  upsample_scales : [4, 4, 4, 4]
-  freq_axis_kernel_size : 3
+norm_wave:
+  sample_rate   : 24000
+  norm_db       : -3.0
+  sil_threshold : 1.0
+  sil_duration  : 0.1
+  preemph       : 0.97
+
+mel_spec:
+  sample_rate   : 24000
+  fft_window_ms : 50.0
+  fft_hop_ms    : 12.5
+  n_fft         : 2048
+  f_min         : 50.0
+  n_mels        : 80
+  ref_db        : 20.0
+  dc_db         : 100.0
+
+mel2embed:
+  seg_len : 128

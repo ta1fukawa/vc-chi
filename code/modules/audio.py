@@ -62,14 +62,29 @@ def _low_cut_filter(wave, cutoff):
 
 
 def load_mel(path):
-    mel = np.load(path)
+    if path.suffix == '.npy':
+        mel = mel.numpy()
+    elif path.suffix == '.pt':
+        mel = mel.to(g.device)
+    else:
+        raise ValueError('Unsupported mel format')
 
     return mel
 
 
 def save_mel(mel, path):
     path.parent.mkdir(parents=True, exist_ok=True)
-    np.save(path, mel)
+
+    if path.suffix == '.npy':
+        if type(mel) == torch.Tensor:
+            mel = mel.detach().cpu().numpy()
+        np.save(path, mel)
+    elif path.suffix == '.pt':
+        if type(mel) == np.ndarray:
+            mel = torch.from_numpy(mel)
+        torch.save(mel, path)
+    else:
+        raise ValueError('Unsupported mel format')
 
 
 def save_mel_img(mel, path):
@@ -95,12 +110,11 @@ def wave2mel(wave):
 
 
 g._waveglow_model = None
-def mel2wave(mel):
+def mel2wave_waveglow(mel):
     if g._waveglow_model is None:
-        g._waveglow_model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_waveglow', model_math='fp16').to('cuda:0')
+        g._waveglow_model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_waveglow', model_math='fp16')
         g._waveglow_model = g._waveglow_model.remove_weightnorm(g._waveglow_model)
-
-        g._waveglow_model.eval()
+        g._waveglow_model.eval().to(g.device)
 
     mel = torch.from_numpy(mel.T).unsqueeze(0).to(g.device)
 
@@ -110,3 +124,37 @@ def mel2wave(mel):
     wave = wave.squeeze(0).cpu().numpy()
 
     return wave
+
+
+g._melgan_model = None
+def mel2wave_melgan(mel):
+    if g._melgan_model is None:
+        from parallel_wavegan.models.melgan import MelGANGenerator
+        from parallel_wavegan.layers.pqmf import PQMF
+
+        g._melgan_model = MelGANGenerator(
+            in_channels=g.num_mels,
+            out_channels=4,
+            kernel_size=7,
+            channels=384,
+            upsample_scales=[5, 5, 3],
+            stack_kernel_size=3,
+            stacks=4,
+            use_weight_norm=True,
+            use_causal_conv=False
+        )
+        g._melgan_model.load_state_dict(torch.load('./model/train_nodev_jsut_multi_band_melgan.v2/checkpoint-1000000steps.pkl')["model"]["generator"])
+        g._melgan_model.register_stats('./model/train_nodev_jsut_multi_band_melgan.v2/stats.h5')
+        g._melgan_model.pqmf = PQMF(subbands=4)
+        g._melgan_model.remove_weight_norm()
+        g._melgan_model = g._melgan_model.eval().to(g.device)
+
+    mel = torch.from_numpy(mel).to(g.device)
+
+    with torch.no_grad():
+        wave = g._melgan_model.inference(mel)
+
+    wave = wave.squeeze(1).cpu().numpy()
+
+    return wave
+

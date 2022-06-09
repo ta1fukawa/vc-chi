@@ -47,11 +47,9 @@ def main(config_path, encoder_path, gpu=0):
 
     wav_dir = pathlib.Path(g.wav_dir)
     mel_dir = pathlib.Path(g.mel_dir)
-    agl_dir = pathlib.Path(g.agl_dir)
     emb_dir = pathlib.Path(g.emb_dir)
 
     mel_dir.mkdir(parents=True, exist_ok=True)
-    agl_dir.mkdir(parents=True, exist_ok=True)
     emb_dir.mkdir(parents=True, exist_ok=True)
 
     for speaker in sorted(wav_dir.iterdir()):
@@ -59,7 +57,6 @@ def main(config_path, encoder_path, gpu=0):
             continue
 
         (mel_dir / speaker.name).mkdir(parents=True, exist_ok=True)
-        (agl_dir / speaker.name).mkdir(parents=True, exist_ok=True)
 
         speaker_mels = []
 
@@ -69,17 +66,14 @@ def main(config_path, encoder_path, gpu=0):
 
             print(f'\rProcess: {speaker.name}/{wav.name}', end='')
 
-            wave, sr = torchaudio.load(str(wav), normalize=True)
-            mel, agl = audio.wave2mel(wave.to(g.device), **config['mel_spec'])
-
-            torch.save(mel, str(mel_dir / speaker.name / f'{wav.stem}.pt'))
-            torch.save(agl, str(agl_dir / speaker.name / f'{wav.stem}.pt'))
+            wave, mel = audio.load_wav(wav)
+            audio.save_mel(mel, mel_dir / speaker.name / f'{wav.stem}.pt')
 
             speaker_mels.append(mel)
 
-        if len(speaker_mels) > 0:
-            emb = audio.mel2embed(speaker_mels, emb_encoder, **config['mel2embed'])
-            torch.save(emb, str(emb_dir / f'{speaker.name}.pt'))
+        # if len(speaker_mels) > 0:
+        #     emb = audio.mel2embed(speaker_mels, emb_encoder, **config['mel2embed'])
+        #     torch.save(emb, str(emb_dir / f'{speaker.name}.pt'))
 
     print()
 
@@ -94,7 +88,7 @@ def pad_seq(mel, seg_len):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_path',  type=pathlib.Path, default='audio_config.yml')
+    parser.add_argument('--config_path',  type=pathlib.Path, default='config.yml')
     parser.add_argument('--encoder_path', type=pathlib.Path, default='model/dvector.pt')
     parser.add_argument('--gpu',          type=int, default=0)
 
