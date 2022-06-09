@@ -25,11 +25,21 @@ emb_dir : './dataset/jvs/emb'
 
 highpass_cutoff : 70.0
 
+# wave -> mel settings
 sample_rate : 22050
 fft_size    : 1024
 num_mels    : 80
-fmin        : 0  # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
+fmin        : 0     # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
 fmax        : 8000  # To be increased/reduced depending on data.
 hop_size    : 256
 win_length  : 1024
 window      : 'hann'
+
+# sample_rate : 24000
+# fft_size    : 2048
+# num_mels    : 80
+# fmin        : 80     # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
+# fmax        : 7600  # To be increased/reduced depending on data.
+# hop_size    : 300
+# win_length  : 1200
+# window      : 'hann'

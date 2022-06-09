@@ -94,28 +94,19 @@ def wave2mel(wave):
     return mel.astype(np.float32).T
 
 
-g._wavenet_model = None
+g._waveglow_model = None
 def mel2wave(mel):
-    if g._wavenet_model is None:
-        g._wavenet_model = wavenet_vocoder.WaveNet(**g.wavenet_model, scalar_input=True).to(g.device)
+    if g._waveglow_model is None:
+        g._waveglow_model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_waveglow', model_math='fp16').to('cuda:0')
+        g._waveglow_model = g._waveglow_model.remove_weightnorm(g._waveglow_model)
 
-        checkpoint = torch.load('model/20180510_mixture_lj_checkpoint_step000320000_ema.pth')
-        g._wavenet_model.load_state_dict(checkpoint['state_dict'])
+        g._waveglow_model.eval()
 
-        g._wavenet_model.eval()
-        g._wavenet_model.make_generation_fast_()
-
-    wave_length = mel.shape[0] * g.hop_size
-
-    initial_input = torch.zeros(1, 1, 1).fill_(0.0).to(g.device)
     mel = torch.from_numpy(mel.T).unsqueeze(0).to(g.device)
 
     with torch.no_grad():
-        wave = g._wavenet_model.incremental_forward(
-            initial_input, c=mel, g=None, T=wave_length, tqdm=tqdm, softmax=True, quantize=True,
-            log_scale_min=g.log_scale_min,
-        )
+        wave = g._waveglow_model.infer(mel)
     
-    wave = wave.view(-1).cpu().numpy()
+    wave = wave.squeeze(0).cpu().numpy()
 
     return wave
