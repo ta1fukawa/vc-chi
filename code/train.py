@@ -97,39 +97,42 @@ def main(config_path, gpu=0):
                     optimizer = torch.optim.SGD(net.parameters(), lr=stage['lr'], momentum=stage['momentum'])
                 logging.debug(f'SET OPTIMIZER: {optimizer}')
 
-                patience = 0
+                try:
+                    patience = 0
 
-                for epoch in range(stage['num_epochs']):
-                    logging.info(f'EPOCH: {epoch + 1} (TOTAL: {total_epoch + 1})')
+                    for epoch in range(stage['num_epochs']):
+                        logging.info(f'EPOCH: {epoch + 1} (TOTAL: {total_epoch + 1})')
 
-                    train_loss = model_train   (net, train_dataset, criterion, optimizer)
-                    valdt_loss = model_validate(net, valdt_dataset, criterion)
+                        train_loss = model_train   (net, train_dataset, criterion, optimizer)
+                        valdt_loss = model_validate(net, valdt_dataset, criterion)
 
-                    logging.info(f'TRAIN LOSS: {train_loss["loss"]:.6f}, VALDT LOSS: {valdt_loss["loss"]:.6f}')
+                        logging.info(f'TRAIN LOSS: {train_loss["loss"]:.6f}, VALDT LOSS: {valdt_loss["loss"]:.6f}')
 
-                    if train_loss['loss'] < best_train_loss['loss']:
-                        best_train_loss = train_loss
-                        torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_train.pth')
-                        logging.debug(f'SAVE BEST TRAIN MODEL: {g.work_dir / "cp" / "best_train.pth"}')
+                        if train_loss['loss'] < best_train_loss['loss']:
+                            best_train_loss = train_loss
+                            torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_train.pth')
+                            logging.debug(f'SAVE BEST TRAIN MODEL: {g.work_dir / "cp" / "best_train.pth"}')
 
-                    if valdt_loss['loss'] < best_valdt_loss['loss']:
-                        best_valdt_loss = valdt_loss
-                        torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_valdt.pth')
-                        logging.debug(f'SAVE BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
+                        if valdt_loss['loss'] < best_valdt_loss['loss']:
+                            best_valdt_loss = valdt_loss
+                            torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_valdt.pth')
+                            logging.debug(f'SAVE BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
 
-                        patience = 0
-                    else:
-                        patience += 1
+                            patience = 0
+                        else:
+                            patience += 1
 
-                    if patience >= stage['patience']:
-                        logging.info(f'EARLY STOPPING: {patience}')
-                        break
+                        if patience >= stage['patience']:
+                            logging.info(f'EARLY STOPPING: {patience}')
+                            break
 
-                    sw.add_scalars('train', train_loss, epoch)
-                    sw.add_scalars('valdt', valdt_loss, epoch)
-                    sw.flush()
+                        sw.add_scalars('train', train_loss, epoch)
+                        sw.add_scalars('valdt', valdt_loss, epoch)
+                        sw.flush()
 
-                    total_epoch += 1
+                        total_epoch += 1
+                except KeyboardInterrupt:
+                    logging.info('SKIPPED BY USER')
 
                 torch.save(net.state_dict(), g.work_dir / 'cp' / 'final.pth')
                 torch.load(g.work_dir / 'cp' / 'best_valdt.pth', map_location=g.device)
