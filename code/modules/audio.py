@@ -76,7 +76,7 @@ def save_mel_img(mel, path):
 
     plt.figure(figsize=(10, 6))
     plt.subplots_adjust(left=0.1, right=0.95, bottom=0.1, top=0.95)
-    plt.imshow(mel.T, cmap='magma', aspect='auto', origin='lower')
+    plt.imshow(mel.T, cmap='magma', aspect='auto', origin='lower', vmin=-10, vmax=2)
     plt.savefig(path)
     plt.close()
 
@@ -88,7 +88,7 @@ def wave2mel(wave):
 
     spec = librosa.stft(wave, n_fft=g.fft_size, hop_length=g.hop_size, win_length=g.win_length, window=g.window, pad_mode='constant')
     mel = np.dot(g._mel_basis, np.abs(spec))
-    mel = np.log10(np.maximum(mel, 1e-10))
+    mel = np.log(np.clip(mel, a_min=1e-10, a_max=None))
 
     return mel.astype(np.float32).T
 
@@ -97,6 +97,10 @@ g._wavenet_model = None
 def mel2wave(mel):
     if g._wavenet_model is None:
         g._wavenet_model = wavenet_vocoder.WaveNet(**g.wavenet_model, scalar_input=True).to(g.device)
+
+        checkpoint = torch.load('model/20180510_mixture_lj_checkpoint_step000320000_ema.pth')
+        g._wavenet_model.load_state_dict(checkpoint['state_dict'])
+
         g._wavenet_model.eval()
         g._wavenet_model.make_generation_fast_()
 
@@ -111,6 +115,6 @@ def mel2wave(mel):
             log_scale_min=g.log_scale_min,
         )
     
-    wave = wave.squeeze(0).cpu().numpy()
+    wave = wave.view(-1).cpu().numpy()
 
     return wave
