@@ -34,6 +34,8 @@ def load_wav(path):
 
     wave = np.clip(wave, -1., 1.)
     wave = _low_cut_filter(wave, g.highpass_cutoff)
+    
+    wave = wave / np.max(np.abs(wave))
 
     wave = np.pad(wave, (0, g.fft_size), mode='constant')
     mel  = wave2mel(wave)
@@ -87,12 +89,12 @@ def save_mel(mel, path):
         raise ValueError('Unsupported mel format')
 
 
-def save_mel_img(mel, path):
+def save_mel_img(mel, path, vmin=-10, vmax=2):
     path.parent.mkdir(parents=True, exist_ok=True)
 
     plt.figure(figsize=(10, 6))
     plt.subplots_adjust(left=0.1, right=0.95, bottom=0.1, top=0.95)
-    plt.imshow(mel.T, cmap='magma', aspect='auto', origin='lower', vmin=-10, vmax=2)
+    plt.imshow(mel.T, cmap='magma', aspect='auto', origin='lower', vmin=vmin, vmax=vmax)
     plt.savefig(path)
     plt.close()
 
@@ -100,61 +102,71 @@ def save_mel_img(mel, path):
 g._mel_basis = None
 def wave2mel(wave):
     if g._mel_basis is None:
-        g._mel_basis = librosa.filters.mel(g.sample_rate, g.fft_size, g.num_mels, g.fmin, g.fmax)
+        g._mel_basis = librosa.filters.mel(
+            sr=g.sample_rate,
+            n_fft=g.fft_size,
+            n_mels=g.num_mels,
+            fmin=g.fmin,
+            fmax=g.fmax
+        )
 
-    spec = librosa.stft(wave, n_fft=g.fft_size, hop_length=g.hop_size, win_length=g.win_length, window=g.window, pad_mode='constant')
-    mel = np.dot(g._mel_basis, np.abs(spec))
-    mel = np.log(np.clip(mel, a_min=1e-10, a_max=None))
+    spec = librosa.stft(
+        wave,
+        n_fft=g.fft_size,
+        hop_length=g.hop_size,
+        win_length=g.win_length,
+        window=g.window,
+        pad_mode='reflect'
+    )
+    mel = np.dot(g._mel_basis, np.abs(spec)).T
+    if g.vocoder == 'melgan':
+        mel = np.log10(np.clip(mel, a_min=1e-5, a_max=None))
+    elif g.vocoder == 'waveglow':
+        mel = np.log(np.clip(mel, a_min=1e-5, a_max=None))
 
-    return mel.astype(np.float32).T
+    return mel.astype(np.float32)
 
 
 g._waveglow_model = None
 def mel2wave_waveglow(mel):
     if g._waveglow_model is None:
-        g._waveglow_model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_waveglow', model_math='fp16')
-        g._waveglow_model = g._waveglow_model.remove_weightnorm(g._waveglow_model)
-        g._waveglow_model.eval().to(g.device)
+        import torchaudio
+
+        g._waveglow_model = torchaudio.pipelines.TACOTRON2_WAVERNN_PHONE_LJSPEECH.get_vocoder().to(g.device)
 
     mel = torch.from_numpy(mel.T).unsqueeze(0).to(g.device)
 
     with torch.no_grad():
-        wave = g._waveglow_model.infer(mel)
-    
-    wave = wave.squeeze(0).cpu().numpy()
+        wave, _ = g._waveglow_model(mel, mel.shape)
+
+    wave = wave.view(-1).cpu().numpy()
+    wave = wave / np.max(np.abs(wave))
 
     return wave
 
 
-g._melgan_model = None
+g._wavegan_model = None
 def mel2wave_melgan(mel):
-    if g._melgan_model is None:
-        from parallel_wavegan.models.melgan import MelGANGenerator
-        from parallel_wavegan.layers.pqmf import PQMF
+    if g._wavegan_model is None:
+        from parallel_wavegan.utils import load_model
 
-        g._melgan_model = MelGANGenerator(
-            in_channels=g.num_mels,
-            out_channels=4,
-            kernel_size=7,
-            channels=384,
-            upsample_scales=[5, 5, 3],
-            stack_kernel_size=3,
-            stacks=4,
-            use_weight_norm=True,
-            use_causal_conv=False
-        )
-        g._melgan_model.load_state_dict(torch.load('./model/train_nodev_jsut_multi_band_melgan.v2/checkpoint-1000000steps.pkl')["model"]["generator"])
-        g._melgan_model.register_stats('./model/train_nodev_jsut_multi_band_melgan.v2/stats.h5')
-        g._melgan_model.pqmf = PQMF(subbands=4)
-        g._melgan_model.remove_weight_norm()
-        g._melgan_model = g._melgan_model.eval().to(g.device)
+        g._wavegan_model = load_model(g.wavegan_model_path)
+        g._wavegan_model.remove_weight_norm()
+        g._wavegan_model.eval().to(g.device)
 
-    mel = torch.from_numpy(mel).to(g.device)
+    from parallel_wavegan.utils import read_hdf5
+    from sklearn.preprocessing import StandardScaler
+
+    scaler = StandardScaler()
+    scaler.mean_ = read_hdf5(g.wavegan_stats_path, 'mean')
+    scaler.scale_ = read_hdf5(g.wavegan_stats_path, 'scale')
+    scaler.n_features_in_ = scaler.mean_.shape[0]
+    mel = scaler.transform(mel)
 
     with torch.no_grad():
-        wave = g._melgan_model.inference(mel)
-
-    wave = wave.squeeze(1).cpu().numpy()
+        wave = g._wavegan_model.inference(mel)
+    
+    wave = wave.view(-1).cpu().numpy()
+    wave = wave / np.max(np.abs(wave))
 
     return wave
-
