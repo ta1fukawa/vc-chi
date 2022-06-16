@@ -33,41 +33,46 @@ class Dataset(torch.utils.data.Dataset):
             np.random.seed(i)
 
             if self.use_same_speaker:
-                speech_idxes = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
-                speaker_idxes = np.random.choice(len(self.files), g.batch_size, replace=False)
+                speech_indices = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
+                speaker_indices = np.random.choice(len(self.files), g.batch_size, replace=False)
 
                 data = torch.stack([
-                    self.padding(torch.load(self.files[speaker_idx][speech_idx]))
-                    for speaker_idx, speech_idx in zip(speaker_idxes, speech_idxes)
+                    self.padding(torch.load(self.files[speaker_index][speech_index]))
+                    for speaker_index, speech_index in zip(speaker_indices, speech_indices)
                 ], dim=0)
 
                 emb = torch.stack([
-                    torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_idx].name}.pt')
-                    for speaker_idx in speaker_idxes
+                    torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_index].name}.pt')
+                    for speaker_index in speaker_indices
                 ], dim=0)
 
-                yield data, data, emb, emb
+                speaker_indices = torch.from_numpy(speaker_indices).long()
+                speech_indices = torch.from_numpy(speech_indices).long()
+                yield data, data, emb, emb, (speaker_indices, speech_indices, speaker_indices)
             else:
-                c_speech_idxes  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
-                c_speaker_idxes = np.random.choice(len(self.files), g.batch_size, replace=False)
-                s_speaker_idxes = np.random.choice(len(self.files), g.batch_size, replace=False)
+                c_speech_indices  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
+                c_speaker_indices = np.random.choice(len(self.files), g.batch_size, replace=False)
+                s_speaker_indices = np.random.choice(len(self.files), g.batch_size, replace=False)
 
                 c_data = torch.stack([
-                    self.padding(torch.load(self.files[speaker_idx][speech_idx]))
-                    for speaker_idx, speech_idx in zip(c_speaker_idxes, c_speech_idxes)
+                    self.padding(torch.load(self.files[speaker_index][speech_index]))
+                    for speaker_index, speech_index in zip(c_speaker_indices, c_speech_indices)
                 ], dim=0)
                 t_data = torch.stack([
-                    self.padding(torch.load(self.files[speaker_idx][speech_idx]))
-                    for speaker_idx, speech_idx in zip(s_speaker_idxes, c_speech_idxes)
+                    self.padding(torch.load(self.files[speaker_index][speech_index]))
+                    for speaker_index, speech_index in zip(s_speaker_indices, c_speech_indices)
                 ], dim=0)
 
                 c_emb = torch.stack([
-                    torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_idx].name}.pt')
-                    for speaker_idx in c_speaker_idxes
+                    torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_index].name}.pt')
+                    for speaker_index in c_speaker_indices
                 ], dim=0)
                 s_emb = torch.stack([
-                    torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_idx].name}.pt')
-                    for speaker_idx in s_speaker_idxes
+                    torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_index].name}.pt')
+                    for speaker_index in s_speaker_indices
                 ], dim=0)
-                
-                yield c_data, t_data, c_emb, s_emb
+
+                c_speaker_indices = torch.from_numpy(c_speaker_indices).long()
+                c_speech_indices = torch.from_numpy(c_speech_indices).long()
+                s_speaker_indices = torch.from_numpy(s_speaker_indices).long()
+                yield c_data, t_data, c_emb, s_emb, (c_speaker_indices, c_speech_indices, s_speaker_indices)

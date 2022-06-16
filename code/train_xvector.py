@@ -10,16 +10,14 @@ import torch.utils.tensorboard
 from modules import global_value as g
 from modules import common
 from modules import dataset
-from modules import model
+from modules import xvector
 from modules import audio
-from modules import vgg_perceptual_loss
-from modules import ssim_loss
 
 
 def main(config_path):
-    common.custom_init(config_path, 'apple', '%Y%m/%d/%H%M%S')
+    common.custom_init(config_path, 'chain', '%Y%m%d/%H%M%S')
 
-    net = model.Net().to(g.device)
+    net = xvector.Net().to(g.device)
     logging.debug(f'MODEL: {net}')
 
     if g.model_load_path is not None:
@@ -31,30 +29,14 @@ def main(config_path):
         valdt_dataset = dataset.Dataset(g.use_same_speaker, **g.valdt_dataset)
         tests_dataset = dataset.Dataset(g.use_same_speaker, **g.tests_dataset)
 
-        vgg_criterion = vgg_perceptual_loss.VGGPerceptualLoss().to(g.device)
-        ssim_criterion = ssim_loss.SSIMLoss(channel=1).to(g.device)
+        cross_entropy_loss = torch.nn.CrossEntropyLoss()
+        def criterion(pred, indices):
+            ce_loss = cross_entropy_loss(pred, indices)
 
-        def criterion(c, t, r, q, c_feat, q_feat):
-            c = c.unsqueeze(1); t = t.unsqueeze(1); r = r.unsqueeze(1); q = q.unsqueeze(1)
-
-            r_mse_loss = torch.nn.functional.mse_loss(r, t)
-            r_vgg_loss = vgg_criterion(r, t)
-            r_ssim_loss = ssim_criterion(r, t)
-            r_loss = r_mse_loss + g.vgg_weight * r_vgg_loss + g.ssim_weight * r_ssim_loss
-
-            q_mse_loss = torch.nn.functional.mse_loss(q, t)
-            q_vgg_loss = vgg_criterion(q, t)
-            q_ssim_loss = ssim_criterion(q, t)
-            q_loss = q_mse_loss + g.vgg_weight * q_vgg_loss + g.ssim_weight * q_ssim_loss
-
-            code_loss = torch.nn.functional.l1_loss(q_feat, c_feat)
-
-            loss = r_loss + q_loss + code_loss
+            loss = ce_loss
 
             losses = {
-                'r_mse_loss': r_mse_loss, 'r_vgg_loss': r_vgg_loss, 'r_ssim_loss': r_ssim_loss, 'r_loss': r_loss,
-                'q_mse_loss': q_mse_loss, 'q_vgg_loss': q_vgg_loss, 'q_ssim_loss': q_ssim_loss, 'q_loss': q_loss,
-                'code_loss': code_loss, 'loss': loss,
+                'loss': ce_loss,
             }
 
             return loss, losses
@@ -128,15 +110,13 @@ def model_train(net, dataset, criterion, optimizer):
 
     avg_losses = {}
 
-    for i, (c, t, c_emb, s_emb, _) in enumerate(dataset):
-        c = c.to(g.device); t = t.to(g.device)
+    for i, (c, _, _, _, (speaker_indices, _, _)) in enumerate(dataset):
+        c = c.to(g.device)
+        speaker_indices = speaker_indices.to(g.device)
 
-        c_feat = net.content_enc(c, c_emb)
-        r      = net.decoder(c_feat, s_emb)
-        q      = r + net.postnet(r)
-        q_feat = net.content_enc(q, c_emb)
+        predictions, x_vec = net(c)
 
-        loss, losses = criterion(c, t, r, q, c_feat, q_feat)
+        loss, losses = criterion(predictions, speaker_indices)
 
         optimizer.zero_grad()
         loss.backward()
@@ -162,16 +142,14 @@ def model_validate(net, dataset, criterion):
 
     avg_losses = {}
 
-    for i, (c, t, c_emb, s_emb, _) in enumerate(dataset):
-        c = c.to(g.device); t = t.to(g.device)
+    for i, (c, _, _, _, (speaker_indices, _, _)) in enumerate(dataset):
+        c = c.to(g.device)
+        speaker_indices = speaker_indices.to(g.device)
 
         with torch.no_grad():
-            c_feat = net.content_enc(c, c_emb)
-            r      = net.decoder(c_feat, s_emb)
-            q      = r + net.postnet(r)
-            q_feat = net.content_enc(q, c_emb)
+            predictions, x_vec = net(c)
 
-        loss, losses = criterion(c, t, r, q, c_feat, q_feat)
+        loss, losses = criterion(predictions, speaker_indices)
 
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
@@ -193,16 +171,14 @@ def model_test(net, dataset, criterion):
 
     avg_losses = {}
 
-    for i, (c, t, c_emb, s_emb, _) in enumerate(dataset):
-        c = c.to(g.device); t = t.to(g.device)
+    for i, (c, _, _, _, (speaker_indices, _, _)) in enumerate(dataset):
+        c = c.to(g.device)
+        speaker_indices = speaker_indices.to(g.device)
 
         with torch.no_grad():
-            c_feat = net.content_enc(c, c_emb)
-            r      = net.decoder(c_feat, s_emb)
-            q      = r + net.postnet(r)
-            q_feat = net.content_enc(q, c_emb)
+            predictions, x_vec = net(c)
 
-        loss, losses = criterion(c, t, r, q, c_feat, q_feat)
+        loss, losses = criterion(predictions, speaker_indices)
 
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
@@ -240,7 +216,7 @@ def predict(net, source_speaker, target_speaker, speech):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_path', type=pathlib.Path, default='config.yml')
+    parser.add_argument('--config_path', type=pathlib.Path, default='xvector_config.yml')
 
     try:
         main(**vars(parser.parse_args()))

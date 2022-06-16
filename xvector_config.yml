@@ -2,7 +2,7 @@
 use_same_speaker : true
 no_train         : false
 model_load_path  : null
-need_predict     : true
+need_predict     : false
 
 # ML
 log_interval : 100
