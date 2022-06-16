@@ -1,5 +1,7 @@
 import datetime
+import inspect
 import logging
+import os
 import pathlib
 import shutil
 
@@ -41,12 +43,19 @@ def backup_codes(
             shutil.copy(src_path, dst_path)
 
 
+def torch_reset_seed(
+    seed=0,
+):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.use_deterministic_algorithms = True
+
 def custom_init(
     config_path: pathlib.Path,
-    code_id: str,
     run_id_format: str,
 ):
-    g.code_id = code_id
+    g.code_id = os.path.splitext(os.path.basename(inspect.stack()[1].filename))[0]
     g.run_id  = datetime.datetime.now().strftime(run_id_format)
 
     g.work_dir = pathlib.Path('wd', g.code_id, g.run_id)
@@ -69,3 +78,5 @@ def custom_init(
         g.device = torch.device('cuda')
     else:
         g.device = torch.device('cpu')
+
+    torch_reset_seed(0)

@@ -106,7 +106,7 @@ def save_mel_img(mel, path, vmin=-10, vmax=2):
     plt.close()
 
 
-def save(name, mel=None, wave=None, vmin=-10, vmax=2, ext='npy'):
+def save(name, mel=None, wave=None, vmin=-10, vmax=2, ext='pt'):
     assert mel is not None or wave is not None
 
     if mel is None:

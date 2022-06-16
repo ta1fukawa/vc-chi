@@ -31,6 +31,14 @@ class Layer(torch.nn.Module):
     def __init__(self, inp, oup, layer='linear', bn=False, activation='linear', activation_param=None, **kwargs):
         super(Layer, self).__init__()
 
+        if bn:
+            if layer in ['linear', 'conv1d']:
+                self.bn = torch.nn.BatchNorm1d(inp)
+            elif layer in ['conv2d']:
+                self.bn = torch.nn.BatchNorm2d(inp)
+        else:
+            self.bn = DoNothing()
+
         if layer == 'linear':
             self.layer = torch.nn.Linear(inp, oup, **kwargs)
         elif layer == 'conv1d':
@@ -38,20 +46,12 @@ class Layer(torch.nn.Module):
         elif layer == 'conv2d':
             self.layer = torch.nn.Conv2d(inp, oup, **kwargs)
 
-        if bn:
-            if layer in ['linear', 'conv1d']:
-                self.bn = torch.nn.BatchNorm1d(oup)
-            elif layer in ['conv2d']:
-                self.bn = torch.nn.BatchNorm2d(oup)
-        else:
-            self.bn = DoNothing()
-
         self.activation = get_activation(activation)
         torch.nn.init.xavier_uniform_(self.layer.weight, gain=torch.nn.init.calculate_gain(activation, param=activation_param))
 
     def forward(self, x: torch.Tensor):
-        x = self.layer(x)
         x = self.bn(x)
+        x = self.layer(x)
         x = self.activation(x)
         return x
 

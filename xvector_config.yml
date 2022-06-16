@@ -1,8 +1,6 @@
 # Root
 use_same_speaker : true
-no_train         : false
-model_load_path  : null
-need_predict     : false
+model_load_path  : 'wd/train_xvector/20220616/202724/cp/best_valdt.pth'
 
 # ML
 log_interval : 100
@@ -10,50 +8,45 @@ batch_size   : 8
 
 stages:
   -
+    mode       : 'small'
     optimizer  : 'adam'
     lr         : 1.e-3
-    num_epochs : 100
-    patience   : 10
+    num_epochs : 1000
+    patience   : 100
   -
+    mode       : 'large'
+    optimizer  : 'adam'
+    lr         : 1.e-3
+    num_epochs : 1000
+    patience   : 100
+  -
+    mode       : 'large'
     optimizer  : 'sgd'
     lr         : 1.e-1
     momentum   : 0.9
-    num_epochs : 200
-    patience   : 20
+    num_epochs : 2000
+    patience   : 200
 
 vgg_weight  : 0.01
 ssim_weight : 0.1
 
-train_dataset:
+small_dataset:
+  num_repeats   : 100
+  speaker_start : 0
+  speaker_end   : 16
+  speech_start  : 0
+  speech_end    : 80
+large_dataset:
   num_repeats   : 100
   speaker_start : 0
   speaker_end   : 80
   speech_start  : 0
   speech_end    : 80
 
-valdt_dataset:
-  num_repeats   : 20
-  speaker_start : 80
-  speaker_end   : 90
-  speech_start  : 80
-  speech_end    : 90
-
-tests_dataset:
-  num_repeats   : 1
-  speaker_start : 90
-  speaker_end   : 100
-  speech_start  : 90
-  speech_end    : 100
-
 # Dataset
 wav_dir : './dataset/jvs/wav'
-mel_dir : './dataset/jvs/mel_melgan'
+mel_dir : './dataset/jvs/mel'
 emb_dir : './dataset/jvs/emb'
-
-predict:
-  source_speaker : 'jvs091'
-  target_speaker : 'jvs092'
-  speech         : 'VOICEACTRESS100_091'
 
 # Audio
 highpass_cutoff : 70.0
@@ -85,11 +78,4 @@ waveglow:
   win_length  : 1024
   window      : 'hann'
 
-mel2embed:
-  seg_len : 128
-
-# Model
-seg_len     : 128
-style_dim   : 256
-dim_neck    : 32
-lstm_stride : 8
+seg_len : 128
