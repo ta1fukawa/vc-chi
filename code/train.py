@@ -267,10 +267,10 @@ def predict(net, source_speaker, target_speaker, speech):
 
     if g.gen_mel_wave:
         (g.work_dir / 'wav').mkdir(parents=True, exist_ok=True)
-        audio.save_wav(audio.mel2wave_waveglow(c), g.work_dir / 'wav' / 'source.wav')
-        audio.save_wav(audio.mel2wave_waveglow(t), g.work_dir / 'wav' / 'target.wav')
-        audio.save_wav(audio.mel2wave_waveglow(r), g.work_dir / 'wav' / 'rec_before.wav')
-        audio.save_wav(audio.mel2wave_waveglow(q), g.work_dir / 'wav' / 'rec_after.wav')
+        audio.save_wav(audio.mel2wave_melgan(c), g.work_dir / 'wav' / 'source.wav')
+        audio.save_wav(audio.mel2wave_melgan(t), g.work_dir / 'wav' / 'target.wav')
+        audio.save_wav(audio.mel2wave_melgan(r), g.work_dir / 'wav' / 'rec_before.wav')
+        audio.save_wav(audio.mel2wave_melgan(q), g.work_dir / 'wav' / 'rec_after.wav')
 
 
 if __name__ == '__main__':

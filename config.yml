@@ -1,6 +1,6 @@
 use_same_speaker : true
-no_train         : false
-model_load_path  : null
+no_train         : true
+model_load_path  : 'wd/apple/202206/10/231347/cp/best_valdt.pth'
 gen_spec_fig     : true
 gen_mel_wave     : true
 
@@ -55,27 +55,27 @@ predict:
 
 highpass_cutoff : 70.0
 
-vocoder : 'waveglow'
+vocoder : 'melgan'
 
 # MelGAN
-# sample_rate : 24000
-# fft_size    : 1024
-# num_mels    : 80
-# fmin        : 80    # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
-# fmax        : 7600  # To be increased/reduced depending on data.
-# hop_size    : 300
-# win_length  : 1024
-# window      : 'hann'
-
-# WaveGlow
-sample_rate : 22050
+sample_rate : 24000
 fft_size    : 1024
 num_mels    : 80
-fmin        : 0     # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
-fmax        : 8000  # To be increased/reduced depending on data.
-hop_size    : 256
+fmin        : 80    # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
+fmax        : 7600  # To be increased/reduced depending on data.
+hop_size    : 300
 win_length  : 1024
 window      : 'hann'
+
+# WaveGlow
+# sample_rate : 22050
+# fft_size    : 1024
+# num_mels    : 80
+# fmin        : 0     # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
+# fmax        : 8000  # To be increased/reduced depending on data.
+# hop_size    : 256
+# win_length  : 1024
+# window      : 'hann'
 
 mel2embed:
   seg_len : 128
