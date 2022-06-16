@@ -66,7 +66,7 @@ def main(config_path):
         with torch.utils.tensorboard.SummaryWriter(g.work_dir / 'tboard') as sw:
             total_epoch = 0
 
-            for stage in g.stages:
+            for stage_no, stage in enumerate(g.stages):
                 logging.info(f'STAGE: {stage}')
 
                 if stage['optimizer'] == 'adam':
@@ -88,12 +88,12 @@ def main(config_path):
 
                         if train_loss['loss'] < best_train_loss['loss']:
                             best_train_loss = train_loss
-                            torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_train.pth')
+                            torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_best_train.pth')
                             logging.debug(f'SAVE BEST TRAIN MODEL: {g.work_dir / "cp" / "best_train.pth"}')
 
                         if valdt_loss['loss'] < best_valdt_loss['loss']:
                             best_valdt_loss = valdt_loss
-                            torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_valdt.pth')
+                            torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth')
                             logging.debug(f'SAVE BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
 
                             patience = 0
@@ -112,8 +112,8 @@ def main(config_path):
                 except KeyboardInterrupt:
                     logging.info('SKIPPED BY USER')
 
-                torch.save(net.state_dict(), g.work_dir / 'cp' / 'final.pth')
-                torch.load(g.work_dir / 'cp' / 'best_valdt.pth', map_location=g.device)
+                torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_final.pth')
+                torch.load(g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth', map_location=g.device)
 
                 tests_loss = model_test(net, tests_dataset, criterion)
 
