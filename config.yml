@@ -16,7 +16,7 @@ stages:
     patience   : 20
   -
     optimizer  : 'sgd'
-    lr         : 1.e-2
+    lr         : 1.e-3
     momentum   : 0.9
     num_epochs : 400
     patience   : 40
@@ -87,7 +87,7 @@ waveglow:
 
 # Model (xvector)
 seg_len     : 128
-style_dim   : 512
+style_dim   : 128
 
 # Model (vc)
 dim_neck    : 32

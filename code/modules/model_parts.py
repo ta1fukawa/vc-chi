@@ -28,14 +28,17 @@ def get_activation(name, **kwargs):
         raise ValueError(f'Unknown activation: {name}')
 
 class Layer(torch.nn.Module):
-    def __init__(self, inp, oup, layer='linear', bn=False, activation='linear', activation_param=None, **kwargs):
+    def __init__(self, inp, oup, layer='linear', bn=False, bn_first=False, activation='linear', activation_param=None, **kwargs):
         super(Layer, self).__init__()
 
+        self.bn_first = bn_first
+
         if bn:
+            size = inp if bn_first else oup
             if layer in ['linear', 'conv1d']:
-                self.bn = torch.nn.BatchNorm1d(inp)
+                self.bn = torch.nn.BatchNorm1d(size)
             elif layer in ['conv2d']:
-                self.bn = torch.nn.BatchNorm2d(inp)
+                self.bn = torch.nn.BatchNorm2d(size)
         else:
             self.bn = DoNothing()
 
@@ -50,8 +53,11 @@ class Layer(torch.nn.Module):
         torch.nn.init.xavier_uniform_(self.layer.weight, gain=torch.nn.init.calculate_gain(activation, param=activation_param))
 
     def forward(self, x: torch.Tensor):
-        x = self.bn(x)
+        if self.bn_first:
+            x = self.bn(x)
         x = self.layer(x)
+        if not self.bn_first:
+            x = self.bn(x)
         x = self.activation(x)
         return x
 

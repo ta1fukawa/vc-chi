@@ -24,89 +24,86 @@ def main(config_path):
         net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
         logging.debug(f'LOAD MODEL: {g.model_load_path}')
 
-    if not g.no_train:
-        cross_entropy_loss = torch.nn.NLLLoss()
-        def criterion(pred, indices):
-            ce_loss = cross_entropy_loss(pred, indices)
+    cross_entropy_loss = torch.nn.NLLLoss()
+    def criterion(pred, indices):
+        ce_loss = cross_entropy_loss(pred, indices)
 
-            loss = ce_loss
+        loss = ce_loss
 
-            losses = {
-                'loss': ce_loss,
-            }
+        losses = {
+            'loss': ce_loss,
+        }
 
-            return loss, losses
+        return loss, losses
 
-        (g.work_dir / 'cp').mkdir(parents=True)
+    (g.work_dir / 'cp').mkdir(parents=True)
 
-        best_train_loss = best_valdt_loss = {'loss': float('inf')}
 
-        with torch.utils.tensorboard.SummaryWriter(g.work_dir / 'tboard') as sw:
-            total_epoch = 0
+    with torch.utils.tensorboard.SummaryWriter(g.work_dir / 'tboard') as sw:
+        total_epoch = 0
 
-            for stage in g.stages:
-                logging.info(f'STAGE: {stage}')
+        for stage_no, stage in enumerate(g.stages):
+            logging.info(f'STAGE: {stage}')
 
-                net.set_train_mode(stage['mode'])
-                if stage['mode'] == 'small':
-                    ds = dataset.Dataset(g.use_same_speaker, **g.small_dataset)
-                    num_repeats = g.small_dataset['num_repeats']
-                elif stage['mode'] == 'large':
-                    ds = dataset.Dataset(g.use_same_speaker, **g.large_dataset)
-                    num_repeats = g.large_dataset['num_repeats']
+            net.set_train_mode(stage['mode'])
+            if stage['mode'] == 'small':
+                ds = dataset.Dataset(g.use_same_speaker, **g.small_dataset)
+                num_repeats = g.small_dataset['num_repeats']
+            elif stage['mode'] == 'large':
+                ds = dataset.Dataset(g.use_same_speaker, **g.large_dataset)
+                num_repeats = g.large_dataset['num_repeats']
 
-                if stage['optimizer'] == 'adam':
-                    optimizer = torch.optim.Adam(net.parameters(), lr=stage['lr'])
-                elif stage['optimizer'] == 'sgd':
-                    optimizer = torch.optim.SGD(net.parameters(), lr=stage['lr'], momentum=stage['momentum'])
-                logging.debug(f'SET OPTIMIZER: {optimizer}')
+            if stage['optimizer'] == 'adam':
+                optimizer = torch.optim.Adam(net.parameters(), lr=stage['lr'])
+            elif stage['optimizer'] == 'sgd':
+                optimizer = torch.optim.SGD(net.parameters(), lr=stage['lr'], momentum=stage['momentum'])
+            logging.debug(f'SET OPTIMIZER: {optimizer}')
 
-                try:
-                    patience = 0
+            try:
+                patience = 0
 
-                    for epoch in range(stage['num_epochs']):
-                        logging.info(f'EPOCH: {epoch + 1} (TOTAL: {total_epoch + 1})')
+                best_train_loss = best_valdt_loss = {'loss': float('inf')}
 
-                        train_loss = model_train   (net, ds, criterion, optimizer, num_repeats)
-                        valdt_loss = model_validate(net, ds, criterion, num_repeats)
+                for epoch in range(stage['num_epochs']):
+                    logging.info(f'EPOCH: {epoch + 1} (TOTAL: {total_epoch + 1})')
 
-                        logging.info(f'TRAIN LOSS: {train_loss["loss"]:.10f}, VALDT LOSS: {valdt_loss["loss"]:.10f}')
+                    train_loss = model_train   (net, ds, criterion, optimizer, num_repeats)
+                    valdt_loss = model_validate(net, ds, criterion, num_repeats)
 
-                        if train_loss['loss'] < best_train_loss['loss']:
-                            best_train_loss = train_loss
-                            torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_train.pth')
-                            logging.debug(f'SAVE BEST TRAIN MODEL: {g.work_dir / "cp" / "best_train.pth"}')
+                    logging.info(f'TRAIN LOSS: {train_loss["loss"]:.10f}, VALDT LOSS: {valdt_loss["loss"]:.10f}')
 
-                        if valdt_loss['loss'] < best_valdt_loss['loss']:
-                            best_valdt_loss = valdt_loss
-                            torch.save(net.state_dict(), g.work_dir / 'cp' / 'best_valdt.pth')
-                            logging.debug(f'SAVE BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
+                    if train_loss['loss'] < best_train_loss['loss']:
+                        best_train_loss = train_loss
+                        torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_best_train.pth')
+                        logging.debug(f'SAVE BEST TRAIN MODEL: {g.work_dir / "cp" / "best_train.pth"}')
 
-                            patience = 0
-                        else:
-                            patience += 1
+                    if valdt_loss['loss'] < best_valdt_loss['loss']:
+                        best_valdt_loss = valdt_loss
+                        torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth')
+                        logging.debug(f'SAVE BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
 
-                        if patience >= stage['patience']:
-                            logging.info(f'EARLY STOPPING: {patience}')
-                            break
+                        patience = 0
+                    else:
+                        patience += 1
 
-                        sw.add_scalars('train', train_loss, epoch)
-                        sw.add_scalars('valdt', valdt_loss, epoch)
-                        sw.flush()
+                    if patience >= stage['patience']:
+                        logging.info(f'EARLY STOPPING: {patience}')
+                        break
 
-                        total_epoch += 1
-                except KeyboardInterrupt:
-                    logging.info('SKIPPED BY USER')
+                    sw.add_scalars('train', train_loss, total_epoch)
+                    sw.add_scalars('valdt', valdt_loss, total_epoch)
+                    sw.flush()
 
-                torch.save(net.state_dict(), g.work_dir / 'cp' / 'final.pth')
-                torch.load(g.work_dir / 'cp' / 'best_valdt.pth', map_location=g.device)
+                    total_epoch += 1
+            except KeyboardInterrupt:
+                logging.info('SKIPPED BY USER')
 
-                tests_loss = model_test(net, ds, criterion, num_repeats)
+            torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_final.pth')
+            torch.load(g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth', map_location=g.device)
 
-                logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.10f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.10f}, TEST LOSS: {tests_loss["loss"]:.10f}')
+            tests_loss = model_test(net, ds, criterion, num_repeats)
 
-    if g.need_predict:
-        predict(net, **g.predict)
+            logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.10f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.10f}, TEST LOSS: {tests_loss["loss"]:.10f}')
 
 
 def model_train(net, dataset, criterion, optimizer, num_repeats):

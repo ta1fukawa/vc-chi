@@ -8,7 +8,7 @@ class Net(torch.nn.Module):
         super().__init__()
 
         self.content_enc = ContentEncoder()
-        self.style_enc = StyleEncoder()
+        self.style_enc   = StyleEncoder()
         self.decoder = Decoder()
         self.postnet = Postnet()
 
@@ -86,7 +86,7 @@ class Decoder(torch.nn.Module):
         x = self.conv2(x)
         x = self.conv3(x)
         x = x.transpose(1, 2)
-        
+
         x, _ = self.lstm2(x)
         x = self.line(x)
 

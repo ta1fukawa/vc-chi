@@ -1,6 +1,6 @@
 # Root
 use_same_speaker : true
-model_load_path  : 'wd/train_xvector/20220616/202724/cp/best_valdt.pth'
+model_load_path  : 'wd/train_xvector/20220617/005534/cp/best_valdt.pth'
 
 # ML
 log_interval : 100
@@ -80,4 +80,4 @@ waveglow:
 
 # Model (xvector)
 seg_len     : 128
-style_dim   : 512
+style_dim   : 128

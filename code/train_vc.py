@@ -61,8 +61,6 @@ def main(config_path):
 
         (g.work_dir / 'cp').mkdir(parents=True)
 
-        best_train_loss = best_valdt_loss = {'loss': float('inf')}
-
         with torch.utils.tensorboard.SummaryWriter(g.work_dir / 'tboard') as sw:
             total_epoch = 0
 
@@ -77,6 +75,8 @@ def main(config_path):
 
                 try:
                     patience = 0
+
+                    best_train_loss = best_valdt_loss = {'loss': float('inf')}
 
                     for epoch in range(stage['num_epochs']):
                         logging.info(f'EPOCH: {epoch + 1} (TOTAL: {total_epoch + 1})')
@@ -104,8 +104,8 @@ def main(config_path):
                             logging.info(f'EARLY STOPPING: {patience}')
                             break
 
-                        sw.add_scalars('train', train_loss, epoch)
-                        sw.add_scalars('valdt', valdt_loss, epoch)
+                        sw.add_scalars('train', train_loss, total_epoch)
+                        sw.add_scalars('valdt', valdt_loss, total_epoch)
                         sw.flush()
 
                         total_epoch += 1
@@ -119,8 +119,8 @@ def main(config_path):
 
                 logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, TEST LOSS: {tests_loss["loss"]:.6f}')
 
-    if g.need_predict:
-        predict(net, **g.predict)
+                if g.need_predict:
+                    predict(net, stage_no, **g.predict)
 
 
 def model_train(net, dataset, criterion, optimizer):
@@ -147,7 +147,7 @@ def model_train(net, dataset, criterion, optimizer):
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
 
         print(f'Training: {i + 1:03d}/{g.train_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
-    
+
     print('\033[K\033[G', end='')
 
     for k, v in avg_losses.items():
@@ -222,7 +222,7 @@ def model_test(net, dataset, criterion):
     return avg_losses
 
 
-def predict(net, source_speaker, target_speaker, speech):
+def predict(net, stage_no, source_speaker, target_speaker, speech):
     net.eval()
 
     c = torch.load(f'{g.mel_dir}/{source_speaker}/{speech}.pt').unsqueeze(0).to(g.device)
@@ -235,10 +235,10 @@ def predict(net, source_speaker, target_speaker, speech):
         r      = net.decoder(c_feat, s_emb)
         q      = r + net.postnet(r)
 
-    audio.save('source',     c.squeeze(0))
-    audio.save('target',     t.squeeze(0))
-    audio.save('rec_before', r.squeeze(0))
-    audio.save('rec_after',  q.squeeze(0))
+    audio.save(f'{stage_no}_source',     c.squeeze(0))
+    audio.save(f'{stage_no}_target',     t.squeeze(0))
+    audio.save(f'{stage_no}_rec_before', r.squeeze(0))
+    audio.save(f'{stage_no}_rec_after',  q.squeeze(0))
 
 
 if __name__ == '__main__':

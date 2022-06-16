@@ -10,23 +10,23 @@ class Net(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.conv1a = mp.Layer(1,  64, layer='conv2d', bn=False, activation='relu', kernel_size=(5, 5), padding='same')
-        self.conv1b = mp.Layer(64, 64, layer='conv2d', bn=True, activation='relu', kernel_size=(5, 5), padding='same')
+        self.conv1a = mp.Layer(1,  64, layer='conv2d', bn=False, bn_first=True, activation='relu', kernel_size=(5, 5), padding='same')
+        self.conv1b = mp.Layer(64, 64, layer='conv2d', bn=True,  bn_first=True, activation='relu', kernel_size=(5, 5), padding='same')
         self.pool1  = torch.nn.MaxPool2d(kernel_size=(1, 4))
 
-        self.conv2a = mp.Layer(64,  128, layer='conv2d', bn=True, activation='relu', kernel_size=(5, 5), padding='same')
-        self.conv2b = mp.Layer(128, 128, layer='conv2d', bn=True, activation='relu', kernel_size=(5, 5), padding='same')
+        self.conv2a = mp.Layer(64,  128, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(5, 5), padding='same')
+        self.conv2b = mp.Layer(128, 128, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(5, 5), padding='same')
         self.pool2  = torch.nn.MaxPool2d(kernel_size=(1, 4))
 
-        self.conv3a = mp.Layer(128, 256, layer='conv2d', bn=True, activation='relu', kernel_size=(5, 5), padding='same')
-        self.conv3b = mp.Layer(256, 256, layer='conv2d', bn=True, activation='relu', kernel_size=(5, 5), padding='same')
+        self.conv3a = mp.Layer(128, 256, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(5, 5), padding='same')
+        self.conv3b = mp.Layer(256, 256, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(5, 5), padding='same')
         self.pool3  = torch.nn.MaxPool2d(kernel_size=(1, 4))
 
-        self.conv4  = mp.Layer(256, 2048, layer='conv2d', bn=True, activation='relu', kernel_size=(5, 5), padding='same')
-        self.line4  = mp.Layer(2048, g.style_dim, layer='linear', bn=True, activation='linear')
+        self.conv4  = mp.Layer(256,  2048,        layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(5, 5), padding='same')
+        self.line4  = mp.Layer(2048, g.style_dim, layer='linear', bn=True, bn_first=True, activation='linear')
 
-        self.line6a = mp.Layer(g.style_dim, 16, layer='linear', bn=True, activation='linear')
-        self.line6b = mp.Layer(g.style_dim, 80, layer='linear', bn=True, activation='linear')
+        self.line6a = mp.Layer(g.style_dim, 16, layer='linear', bn=True, bn_first=True, activation='linear')
+        self.line6b = mp.Layer(g.style_dim, 80, layer='linear', bn=True, bn_first=True, activation='linear')
 
         self.mode = 'small'
 
