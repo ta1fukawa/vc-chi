@@ -2,15 +2,21 @@
 import sys
 
 import matplotlib
+
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 import librosa
+import matplotlib.pyplot as plt
 import numpy as np
+import parallel_wavegan.utils
+import scipy.signal
 import soundfile as sf
-from scipy.io import wavfile
-import wavenet_vocoder
 import torch
-from tqdm import tqdm
+import torchaudio
+# import wavenet_vocoder
+from scipy.io import wavfile
+from sklearn.preprocessing import StandardScaler
+
+# from tqdm import tqdm
 
 sys.path.append('code')
 
@@ -55,10 +61,8 @@ def _low_cut_filter(wave, cutoff):
     nyquist = g.sample_rate // 2
     norm_cutoff = cutoff / nyquist
 
-    from scipy.signal import firwin, lfilter
-
-    fil = firwin(255, norm_cutoff, pass_zero=False)
-    wave = lfilter(fil, 1, wave)
+    fil = scipy.signal.firwin(255, norm_cutoff, pass_zero=False)
+    wave = scipy.signal.lfilter(fil, 1, wave)
 
     return wave
 
@@ -130,8 +134,6 @@ def wave2mel(wave):
 g._waveglow_model = None
 def mel2wave_waveglow(mel):
     if g._waveglow_model is None:
-        import torchaudio
-
         g._waveglow_model = torchaudio.pipelines.TACOTRON2_WAVERNN_PHONE_LJSPEECH.get_vocoder().to(g.device)
 
     mel = torch.from_numpy(mel.T).unsqueeze(0).to(g.device)
@@ -148,24 +150,19 @@ def mel2wave_waveglow(mel):
 g._wavegan_model = None
 def mel2wave_melgan(mel):
     if g._wavegan_model is None:
-        from parallel_wavegan.utils import load_model
-
-        g._wavegan_model = load_model(g.wavegan_model_path)
+        g._wavegan_model = parallel_wavegan.utils.load_model(g.wavegan_model_path)
         g._wavegan_model.remove_weight_norm()
         g._wavegan_model.eval().to(g.device)
 
-    from parallel_wavegan.utils import read_hdf5
-    from sklearn.preprocessing import StandardScaler
-
     scaler = StandardScaler()
-    scaler.mean_ = read_hdf5(g.wavegan_stats_path, 'mean')
-    scaler.scale_ = read_hdf5(g.wavegan_stats_path, 'scale')
+    scaler.mean_  = parallel_wavegan.utils.read_hdf5(g.wavegan_stats_path, 'mean')
+    scaler.scale_ = parallel_wavegan.utils.read_hdf5(g.wavegan_stats_path, 'scale')
     scaler.n_features_in_ = scaler.mean_.shape[0]
     mel = scaler.transform(mel)
 
     with torch.no_grad():
         wave = g._wavegan_model.inference(mel)
-    
+
     wave = wave.view(-1).cpu().numpy()
     wave = wave / np.max(np.abs(wave))
 

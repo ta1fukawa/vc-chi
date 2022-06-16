@@ -34,6 +34,8 @@ def main(config_path, gpu=0):
 
     for k, v in config.items():
         setattr(g, k, v)
+    for k, v in config[g.vocoder].items():
+        setattr(g, k, v)
 
     if gpu >= 0:
         assert torch.cuda.is_available()
@@ -141,7 +143,8 @@ def main(config_path, gpu=0):
 
                 logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, TEST LOSS: {tests_loss["loss"]:.6f}')
 
-    predict(net, **g.predict)
+    if g.need_predict:
+        predict(net, **g.predict)
 
 
 def model_train(net, dataset, criterion, optimizer):
@@ -258,19 +261,29 @@ def predict(net, source_speaker, target_speaker, speech):
     r = r.squeeze(0).cpu().numpy()
     q = q.squeeze(0).cpu().numpy()
 
-    if g.gen_spec_fig:
-        (g.work_dir / 'img').mkdir(parents=True, exist_ok=True)
-        audio.save_mel_img(c, g.work_dir / 'img' / 'source.png')
-        audio.save_mel_img(t, g.work_dir / 'img' / 'target.png')
-        audio.save_mel_img(r, g.work_dir / 'img' / 'rec_before.png')
-        audio.save_mel_img(q, g.work_dir / 'img' / 'rec_after.png')
+    if g.vocoder == 'melgan':
+        c_mel = audio.mel2wave_melgan(c)
+        t_mel = audio.mel2wave_melgan(t)
+        r_mel = audio.mel2wave_melgan(r)
+        q_mel = audio.mel2wave_melgan(q)
+    elif g.vocoder == 'waveglow':
+        c_mel = audio.mel2wave_waveglow(c)
+        t_mel = audio.mel2wave_waveglow(t)
+        r_mel = audio.mel2wave_waveglow(r)
+        q_mel = audio.mel2wave_waveglow(q)
 
-    if g.gen_mel_wave:
-        (g.work_dir / 'wav').mkdir(parents=True, exist_ok=True)
-        audio.save_wav(audio.mel2wave_melgan(c), g.work_dir / 'wav' / 'source.wav')
-        audio.save_wav(audio.mel2wave_melgan(t), g.work_dir / 'wav' / 'target.wav')
-        audio.save_wav(audio.mel2wave_melgan(r), g.work_dir / 'wav' / 'rec_before.wav')
-        audio.save_wav(audio.mel2wave_melgan(q), g.work_dir / 'wav' / 'rec_after.wav')
+    (g.work_dir / 'img').mkdir(parents=True, exist_ok=True)
+    audio.save_mel_img(c, g.work_dir / 'img' / 'source.png')
+    audio.save_mel_img(t, g.work_dir / 'img' / 'target.png')
+    audio.save_mel_img(r, g.work_dir / 'img' / 'rec_before.png')
+    audio.save_mel_img(q, g.work_dir / 'img' / 'rec_after.png')
+    audio.save_mel_img(audio.wave2mel(q_mel), g.work_dir / 'img' / 'rec_after_wave.png')
+
+    (g.work_dir / 'wav').mkdir(parents=True, exist_ok=True)
+    audio.save_wav(c_mel, g.work_dir / 'wav' / 'source.wav')
+    audio.save_wav(t_mel, g.work_dir / 'wav' / 'target.wav')
+    audio.save_wav(r_mel, g.work_dir / 'wav' / 'rec_before.wav')
+    audio.save_wav(q_mel, g.work_dir / 'wav' / 'rec_after.wav')
 
 
 if __name__ == '__main__':
