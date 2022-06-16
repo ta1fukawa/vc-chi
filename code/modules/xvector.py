@@ -23,10 +23,10 @@ class Net(torch.nn.Module):
         self.pool3  = torch.nn.MaxPool2d(kernel_size=(1, 4))
 
         self.conv4  = mp.Layer(256, 2048, layer='conv2d', bn=True, activation='relu', kernel_size=(5, 5), padding='same')
-        self.line4  = mp.Layer(2048, 512, layer='linear', bn=True, activation='linear')
+        self.line4  = mp.Layer(2048, g.style_dim, layer='linear', bn=True, activation='linear')
 
-        self.line6a = mp.Layer(512, 16, layer='linear', bn=True, activation='linear')
-        self.line6b = mp.Layer(512, 80, layer='linear', bn=True, activation='linear')
+        self.line6a = mp.Layer(g.style_dim, 16, layer='linear', bn=True, activation='linear')
+        self.line6b = mp.Layer(g.style_dim, 80, layer='linear', bn=True, activation='linear')
 
         self.mode = 'small'
 

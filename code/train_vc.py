@@ -17,7 +17,7 @@ from modules import ssim_loss
 
 
 def main(config_path):
-    common.custom_init(config_path, 'apple', '%Y%m/%d/%H%M%S')
+    common.custom_init(config_path, '%Y%m/%d/%H%M%S')
 
     net = model.Net().to(g.device)
     logging.debug(f'MODEL: {net}')
@@ -130,6 +130,7 @@ def model_train(net, dataset, criterion, optimizer):
 
     for i, (c, t, c_emb, s_emb, _) in enumerate(dataset):
         c = c.to(g.device); t = t.to(g.device)
+        c_emb = c_emb.to(g.device); s_emb = s_emb.to(g.device)
 
         c_feat = net.content_enc(c, c_emb)
         r      = net.decoder(c_feat, s_emb)
@@ -164,6 +165,7 @@ def model_validate(net, dataset, criterion):
 
     for i, (c, t, c_emb, s_emb, _) in enumerate(dataset):
         c = c.to(g.device); t = t.to(g.device)
+        c_emb = c_emb.to(g.device); s_emb = s_emb.to(g.device)
 
         with torch.no_grad():
             c_feat = net.content_enc(c, c_emb)
@@ -195,6 +197,7 @@ def model_test(net, dataset, criterion):
 
     for i, (c, t, c_emb, s_emb, _) in enumerate(dataset):
         c = c.to(g.device); t = t.to(g.device)
+        c_emb = c_emb.to(g.device); s_emb = s_emb.to(g.device)
 
         with torch.no_grad():
             c_feat = net.content_enc(c, c_emb)

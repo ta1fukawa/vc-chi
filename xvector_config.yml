@@ -78,4 +78,6 @@ waveglow:
   win_length  : 1024
   window      : 'hann'
 
-seg_len : 128
+# Model (xvector)
+seg_len     : 128
+style_dim   : 512

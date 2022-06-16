@@ -11,7 +11,6 @@ from modules import global_value as g
 from modules import xvector, ssim_loss, vgg_perceptual_loss
 
 
-
 def main(config_path):
     common.custom_init(config_path, '%Y%m%d/%H%M%S')
 
@@ -61,7 +60,7 @@ def predict(net):
             emb = torch.mean(emb, dim=0).cpu()
             torch.save(emb, str(emb_dir / f'{speaker.name}.pt'))
 
-    print('Finished\033[K\033[G')
+    print('\033[K\033[G', end='')
 
 
 def padding(data):
