@@ -40,7 +40,7 @@ def load_wav(path):
 
     wave = np.clip(wave, -1., 1.)
     wave = _low_cut_filter(wave, g.highpass_cutoff)
-    
+
     wave = wave / np.max(np.abs(wave))
 
     wave = np.pad(wave, (0, g.fft_size), mode='constant')
@@ -52,7 +52,7 @@ def load_wav(path):
     return wave, mel
 
 
-def save_wav(wave, path):
+def save_wav_file(wave, path):
     path.parent.mkdir(parents=True, exist_ok=True)
     sf.write(path, wave, g.sample_rate)
 
@@ -67,7 +67,7 @@ def _low_cut_filter(wave, cutoff):
     return wave
 
 
-def load_mel(path):
+def load_mel_data(path):
     if path.suffix == '.npy':
         mel = mel.numpy()
     elif path.suffix == '.pt':
@@ -78,7 +78,7 @@ def load_mel(path):
     return mel
 
 
-def save_mel(mel, path):
+def save_mel_data(mel, path):
     path.parent.mkdir(parents=True, exist_ok=True)
 
     if path.suffix == '.npy':
@@ -96,11 +96,41 @@ def save_mel(mel, path):
 def save_mel_img(mel, path, vmin=-10, vmax=2):
     path.parent.mkdir(parents=True, exist_ok=True)
 
+    if type(mel) == torch.Tensor:
+        mel = mel.detach().cpu().numpy()
+
     plt.figure(figsize=(10, 6))
     plt.subplots_adjust(left=0.1, right=0.95, bottom=0.1, top=0.95)
     plt.imshow(mel.T, cmap='magma', aspect='auto', origin='lower', vmin=vmin, vmax=vmax)
     plt.savefig(path)
     plt.close()
+
+
+def save(name, mel=None, wave=None, vmin=-10, vmax=2, ext='npy'):
+    assert mel is not None or wave is not None
+
+    if mel is None:
+        mel = wave2mel(wave)
+    if type(mel) == torch.Tensor:
+        mel = mel.detach().cpu().numpy()
+
+    mel_data_path = g.work_dir / 'mel' / f'{name}.{ext}'
+    mel_data_path.parent.mkdir(parents=True, exist_ok=True)
+    save_mel_data(mel, mel_data_path)
+
+    mel_img_path = g.work_dir / 'img' / f'{name}.png'
+    mel_img_path.parent.mkdir(parents=True, exist_ok=True)
+    save_mel_img(mel, mel_img_path, vmin=vmin, vmax=vmax)
+
+    if wave is None:
+        if g.vocoder == 'melgan':
+            wave = mel2wave_melgan(mel)
+        elif g.vocoder == 'waveglow':
+            wave = mel2wave_waveglow(mel)
+
+    wav_file_path = g.work_dir / 'wav' / f'{name}.wav'
+    wav_file_path.parent.mkdir(parents=True, exist_ok=True)
+    save_wav_file(wave, wav_file_path)
 
 
 g._mel_basis = None

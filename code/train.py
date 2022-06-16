@@ -1,5 +1,4 @@
 import argparse
-import datetime
 import logging
 import pathlib
 import traceback
@@ -7,45 +6,22 @@ import traceback
 import matplotlib; matplotlib.use('Agg')
 import torch
 import torch.utils.tensorboard
-import torchinfo
-import yaml
 
-from modules import common, dataset
 from modules import global_value as g
+from modules import common
+from modules import dataset
 from modules import model
 from modules import audio
-from modules import vgg_perceptual_loss, ssim_loss
+from modules import vgg_perceptual_loss
+from modules import ssim_loss
 
 
-def main(config_path, gpu=0):
-    g.code_id = 'apple'
-    g.run_id  = datetime.datetime.now().strftime('%Y%m/%d/%H%M%S')
-
-    g.work_dir = pathlib.Path('wd', g.code_id, g.run_id)
-    g.work_dir.mkdir(parents=True)
-
-    common.init_logger(g.work_dir / 'run.log')
-    logging.info(f'CODE/RUN: {g.code_id}/{g.run_id}')
-
-    common.backup_codes(pathlib.Path(__file__).parent, g.work_dir / 'code')
-
-    config = yaml.load(config_path.open(mode='r'), Loader=yaml.FullLoader)
-    logging.debug(f'CONFIG: {config}')
-
-    for k, v in config.items():
-        setattr(g, k, v)
-    for k, v in config[g.vocoder].items():
-        setattr(g, k, v)
-
-    if gpu >= 0:
-        assert torch.cuda.is_available()
-        g.device = torch.device(f'cuda:{gpu}')
-    else:
-        g.device = torch.device('cpu')
+def main(config_path):
+    common.custom_init(config_path, 'apple', '%Y%m/%d/%H%M%S')
 
     net = model.Net().to(g.device)
     logging.debug(f'MODEL: {net}')
-    
+
     if g.model_load_path is not None:
         net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
         logging.debug(f'LOAD MODEL: {g.model_load_path}')
@@ -89,7 +65,7 @@ def main(config_path, gpu=0):
 
         with torch.utils.tensorboard.SummaryWriter(g.work_dir / 'tboard') as sw:
             total_epoch = 0
-            
+
             for stage in g.stages:
                 logging.info(f'STAGE: {stage}')
 
@@ -234,7 +210,7 @@ def model_test(net, dataset, criterion):
         print(f'Testing: {i + 1:03d}/{g.tests_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
 
     print('\033[K\033[G', end='')
-        
+
     for k, v in avg_losses.items():
         avg_losses[k] /= g.tests_dataset['num_repeats'] * g.batch_size
 
@@ -256,40 +232,15 @@ def predict(net, source_speaker, target_speaker, speech):
         r      = net.decoder(c_feat, s_emb)
         q      = r + net.postnet(r)
 
-    c = c.squeeze(0).cpu().numpy()
-    t = t.squeeze(0).cpu().numpy()
-    r = r.squeeze(0).cpu().numpy()
-    q = q.squeeze(0).cpu().numpy()
-
-    if g.vocoder == 'melgan':
-        c_mel = audio.mel2wave_melgan(c)
-        t_mel = audio.mel2wave_melgan(t)
-        r_mel = audio.mel2wave_melgan(r)
-        q_mel = audio.mel2wave_melgan(q)
-    elif g.vocoder == 'waveglow':
-        c_mel = audio.mel2wave_waveglow(c)
-        t_mel = audio.mel2wave_waveglow(t)
-        r_mel = audio.mel2wave_waveglow(r)
-        q_mel = audio.mel2wave_waveglow(q)
-
-    (g.work_dir / 'img').mkdir(parents=True, exist_ok=True)
-    audio.save_mel_img(c, g.work_dir / 'img' / 'source.png')
-    audio.save_mel_img(t, g.work_dir / 'img' / 'target.png')
-    audio.save_mel_img(r, g.work_dir / 'img' / 'rec_before.png')
-    audio.save_mel_img(q, g.work_dir / 'img' / 'rec_after.png')
-    audio.save_mel_img(audio.wave2mel(q_mel), g.work_dir / 'img' / 'rec_after_wave.png')
-
-    (g.work_dir / 'wav').mkdir(parents=True, exist_ok=True)
-    audio.save_wav(c_mel, g.work_dir / 'wav' / 'source.wav')
-    audio.save_wav(t_mel, g.work_dir / 'wav' / 'target.wav')
-    audio.save_wav(r_mel, g.work_dir / 'wav' / 'rec_before.wav')
-    audio.save_wav(q_mel, g.work_dir / 'wav' / 'rec_after.wav')
+    audio.save('source',     c.squeeze(0))
+    audio.save('target',     t.squeeze(0))
+    audio.save('rec_before', r.squeeze(0))
+    audio.save('rec_after',  q.squeeze(0))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_path', type=pathlib.Path, default='config.yml')
-    parser.add_argument('--gpu',         type=int, default=0)
 
     try:
         main(**vars(parser.parse_args()))
