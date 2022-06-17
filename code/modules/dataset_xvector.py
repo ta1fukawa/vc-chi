@@ -33,7 +33,7 @@ class Dataset(torch.utils.data.Dataset):
             np.random.seed(i)
 
             speaker_indices = np.random.choice(len(self.files), g.batch_size, replace=False)
-            speech_indices = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
+            speech_indices  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
 
             data = torch.stack([
                 self.padding(torch.load(self.files[speaker_index][speech_index]))
@@ -41,5 +41,5 @@ class Dataset(torch.utils.data.Dataset):
             ], dim=0)
 
             speaker_indices = torch.from_numpy(speaker_indices).long()
-            speech_indices = torch.from_numpy(speech_indices).long()
+            speech_indices  = torch.from_numpy(speech_indices).long()
             yield data, (speaker_indices, speech_indices)

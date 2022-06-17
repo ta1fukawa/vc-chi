@@ -17,7 +17,7 @@ from modules import audio
 def main(config_path):
     common.custom_init(config_path, '%Y%m%d/%H%M%S')
 
-    net = xvector.Net2().to(g.device)
+    net = xvector.Net().to(g.device)
     logging.debug(f'MODEL: {net}')
 
     if g.model_load_path is not None:
@@ -27,20 +27,17 @@ def main(config_path):
     nll_criterion = torch.nn.NLLLoss()
     def criterion(pred, indices):
         nll_loss = nll_criterion(pred, indices)
+        acc = (pred.argmax(dim=1) == indices).float().mean()
 
         loss = nll_loss
 
         losses = {
             'nll_loss': nll_loss,
             'loss': loss,
+            'acc': acc,
         }
 
         return loss, losses
-
-    def accuracy(pred, indices):
-        acc = (pred.argmax(dim=1) == indices).float().mean()
-
-        return acc
 
     (g.work_dir / 'cp').mkdir(parents=True)
 
@@ -54,6 +51,9 @@ def main(config_path):
             if stage['mode'] == 'small':
                 ds = dataset_xvector.Dataset(**g.small_dataset)
                 num_repeats = g.small_dataset['num_repeats']
+            elif stage['mode'] == 'medium':
+                ds = dataset_xvector.Dataset(**g.medium_dataset)
+                num_repeats = g.medium_dataset['num_repeats']
             elif stage['mode'] == 'large':
                 ds = dataset_xvector.Dataset(**g.large_dataset)
                 num_repeats = g.large_dataset['num_repeats']
@@ -72,11 +72,11 @@ def main(config_path):
                 for epoch in range(stage['num_epochs']):
                     logging.info(f'EPOCH: {epoch + 1} (TOTAL: {total_epoch + 1})')
 
-                    train_loss, train_accuracy = model_train   (net, ds, criterion, accuracy, optimizer, num_repeats)
-                    valdt_loss, valdt_accuracy = model_validate(net, ds, criterion, accuracy, num_repeats)
+                    train_loss = model_train   (net, ds, criterion, optimizer, num_repeats)
+                    valdt_loss = model_validate(net, ds, criterion, num_repeats)
 
                     logging.info(f'TRAIN LOSS: {train_loss["loss"]:.10f}, VALDT LOSS: {valdt_loss["loss"]:.10f}')
-                    logging.info(f'TRAIN ACC: {train_accuracy * 100:.4f}, VALDT ACC: {valdt_accuracy * 100:.4f}')
+                    logging.info(f'TRAIN ACC: {train_loss["acc"]:.4f}, VALDT ACC: {valdt_loss["acc"]:.4f}')
 
                     if train_loss['loss'] < best_train_loss['loss']:
                         best_train_loss = train_loss
@@ -107,16 +107,19 @@ def main(config_path):
             torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_final.pth')
             torch.load(g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth', map_location=g.device)
 
-            tests_loss, tests_accuracy = model_test(net, ds, criterion, accuracy, num_repeats)
+            tests_loss = model_test(net, ds, criterion, num_repeats)
 
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.10f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.10f}, TEST LOSS: {tests_loss["loss"]:.10f}')
+            logging.info(f'BEST TRAIN ACC: {best_train_loss["acc"]:.4f}, BEST VALDT ACC: {best_valdt_loss["acc"]:.4f}, TEST ACC: {tests_loss["acc"]:.4f}')
+
+            sw.add_scalars('tests', tests_loss, stage_no)
+            sw.flush()
 
 
-def model_train(net, dataset, criterion, accuracy, optimizer, num_repeats):
+def model_train(net, dataset, criterion, optimizer, num_repeats):
     net.train()
 
     avg_losses = {}
-    avg_acc = 0.0
 
     for i, (c, (speaker_indices, _)) in enumerate(dataset):
         c = c.to(g.device)
@@ -125,7 +128,6 @@ def model_train(net, dataset, criterion, accuracy, optimizer, num_repeats):
         pred, _ = net(c)
 
         loss, losses = criterion(pred, speaker_indices)
-        acc = accuracy(pred, speaker_indices)
 
         optimizer.zero_grad()
         loss.backward()
@@ -134,28 +136,23 @@ def model_train(net, dataset, criterion, accuracy, optimizer, num_repeats):
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
 
-        avg_acc += acc.item()
-
-        print(f'Training: {i + 1:03d}/{num_repeats:03d} (loss={loss.item() / g.batch_size:.10f}, acc={acc.item() * 100:.4f})\033[K\033[G', end='')
+        print(f'Training: {i + 1:03d}/{num_repeats:03d} (loss={loss.item():.10f}, acc={losses["acc"].item():.4f})\033[K\033[G', end='')
     
     print('\033[K\033[G', end='')
 
     for k, v in avg_losses.items():
-        avg_losses[k] /= num_repeats * g.batch_size
-    
-    avg_acc /= num_repeats * g.batch_size
+        avg_losses[k] /= num_repeats
 
     logging.debug(f'TRAIN LOSSES: {avg_losses}')
-    logging.debug(f'TRAIN ACC: {avg_acc * 100}')
+    logging.debug(f'TRAIN ACC: {avg_losses["acc"]:.4f}')
 
-    return avg_losses, avg_acc
+    return avg_losses
 
 
-def model_validate(net, dataset, criterion, accuracy, num_repeats):
+def model_validate(net, dataset, criterion, num_repeats):
     net.eval()
 
     avg_losses = {}
-    avg_acc = 0.0
 
     for i, (c, (speaker_indices, _)) in enumerate(dataset):
         c = c.to(g.device)
@@ -165,36 +162,29 @@ def model_validate(net, dataset, criterion, accuracy, num_repeats):
             pred, _ = net(c)
 
         loss, losses = criterion(pred, speaker_indices)
-        acc = accuracy(pred, speaker_indices)
 
         if loss.item() >= 100:
             net(c)
 
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
-        
-        avg_acc += acc.item()
 
-        print(f'Validate: {i + 1:03d}/{num_repeats:03d} (loss={loss.item() / g.batch_size:.10f}, acc={acc.item() * 100:.4f})\033[K\033[G', end='')
+        print(f'Validate: {i + 1:03d}/{num_repeats:03d} (loss={loss.item():.10f}, acc={losses["acc"].item():.4f})\033[K\033[G', end='')
 
     print('\033[K\033[G', end='')
 
     for k, v in avg_losses.items():
-        avg_losses[k] /= num_repeats * g.batch_size
-
-    avg_acc /= num_repeats * g.batch_size
+        avg_losses[k] /= num_repeats
 
     logging.debug(f'VALIDATE LOSSES: {avg_losses}')
-    logging.debug(f'VALIDATE ACC: {avg_acc * 100}')
 
-    return avg_losses, avg_acc
+    return avg_losses
 
 
-def model_test(net, dataset, criterion, accuracy, num_repeats):
+def model_test(net, dataset, criterion, num_repeats):
     net.eval()
 
     avg_losses = {}
-    avg_acc = 0.0
 
     for i, (c, (speaker_indices, _)) in enumerate(dataset):
         c = c.to(g.device)
@@ -204,26 +194,21 @@ def model_test(net, dataset, criterion, accuracy, num_repeats):
             pred, _ = net(c)
 
         loss, losses = criterion(pred, speaker_indices)
-        acc = accuracy(pred, speaker_indices)
 
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
         
-        avg_acc += acc.item()
-
-        print(f'Testing: {i + 1:03d}/{num_repeats:03d} (loss={loss.item() / g.batch_size:.10f}, acc={acc.item() * 100:.4f})\033[K\033[G', end='')
+        print(f'Testing: {i + 1:03d}/{num_repeats:03d} (loss={loss.item():.10f}, acc={losses["acc"].item():.4f})\033[K\033[G', end='')
 
     print('\033[K\033[G', end='')
 
     for k, v in avg_losses.items():
-        avg_losses[k] /= num_repeats * g.batch_size
-
-    avg_acc /= num_repeats * g.batch_size
+        avg_losses[k] /= num_repeats
 
     logging.debug(f'TEST LOSSES: {avg_losses}')
-    logging.debug(f'TEST ACC: {avg_acc * 100}')
+    logging.debug(f'TEST ACC: {avg_losses["acc"]:.4f}')
 
-    return avg_losses, avg_acc
+    return avg_losses
 
 
 if __name__ == '__main__':

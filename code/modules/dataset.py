@@ -48,7 +48,7 @@ class Dataset(torch.utils.data.Dataset):
                 ], dim=0)
 
                 speaker_indices = torch.from_numpy(speaker_indices).long()
-                speech_indices = torch.from_numpy(speech_indices).long()
+                speech_indices  = torch.from_numpy(speech_indices).long()
                 yield data, data, emb, emb, (speaker_indices, speech_indices, speaker_indices)
             else:
                 c_speaker_indices = np.random.choice(len(self.files), g.batch_size, replace=False)
@@ -74,6 +74,6 @@ class Dataset(torch.utils.data.Dataset):
                 ], dim=0)
 
                 c_speaker_indices = torch.from_numpy(c_speaker_indices).long()
-                c_speech_indices = torch.from_numpy(c_speech_indices).long()
+                c_speech_indices  = torch.from_numpy(c_speech_indices).long()
                 s_speaker_indices = torch.from_numpy(s_speaker_indices).long()
                 yield c_data, t_data, c_emb, s_emb, (c_speaker_indices, c_speech_indices, s_speaker_indices)

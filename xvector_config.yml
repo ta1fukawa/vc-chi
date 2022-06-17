@@ -1,6 +1,6 @@
 # Root
 use_same_speaker : true
-model_load_path  : null
+model_load_path  : 'wd/train_xvector/20220618/033433/cp/0_best_train.pth'
 
 # ML
 log_interval : 100
@@ -8,24 +8,18 @@ batch_size   : 8
 
 stages:
   -
-    mode       : 'small'
-    optimizer  : 'adam'
-    lr         : 1.e-3
-    num_epochs : 1000
-    patience   : 100
-  -
     mode       : 'large'
     optimizer  : 'adam'
     lr         : 1.e-3
-    num_epochs : 1000
-    patience   : 100
+    num_epochs : 400
+    patience   : 20
   -
     mode       : 'large'
     optimizer  : 'sgd'
     lr         : 1.e-1
     momentum   : 0.9
-    num_epochs : 2000
-    patience   : 200
+    num_epochs : 400
+    patience   : 20
 
 vgg_weight  : 0.01
 ssim_weight : 0.1
@@ -33,7 +27,13 @@ ssim_weight : 0.1
 small_dataset:
   num_repeats   : 100
   speaker_start : 0
-  speaker_end   : 16
+  speaker_end   : 20
+  speech_start  : 0
+  speech_end    : 80
+medium_dataset:
+  num_repeats   : 100
+  speaker_start : 0
+  speaker_end   : 40
   speech_start  : 0
   speech_end    : 80
 large_dataset:

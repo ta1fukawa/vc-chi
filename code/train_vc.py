@@ -118,6 +118,9 @@ def main(config_path):
 
                 logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, TEST LOSS: {tests_loss["loss"]:.6f}')
 
+                sw.add_scalars('tests', tests_loss, stage_no)
+                sw.flush()
+
                 if g.need_predict:
                     predict(net, stage_no, **g.predict)
 
@@ -145,12 +148,12 @@ def model_train(net, dataset, criterion, optimizer):
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
 
-        print(f'Training: {i + 1:03d}/{g.train_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
+        print(f'Training: {i + 1:03d}/{g.train_dataset["num_repeats"]:03d} (loss={loss.item():.6f})\033[K\033[G', end='')
 
     print('\033[K\033[G', end='')
 
     for k, v in avg_losses.items():
-        avg_losses[k] /= g.train_dataset['num_repeats'] * g.batch_size
+        avg_losses[k] /= g.train_dataset['num_repeats']
 
     logging.debug(f'TRAIN LOSSES: {avg_losses}')
 
@@ -177,12 +180,12 @@ def model_validate(net, dataset, criterion):
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
 
-        print(f'Validate: {i + 1:03d}/{g.valdt_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
+        print(f'Validate: {i + 1:03d}/{g.valdt_dataset["num_repeats"]:03d} (loss={loss.item():.6f})\033[K\033[G', end='')
 
     print('\033[K\033[G', end='')
 
     for k, v in avg_losses.items():
-        avg_losses[k] /= g.valdt_dataset['num_repeats'] * g.batch_size
+        avg_losses[k] /= g.valdt_dataset['num_repeats']
 
     logging.debug(f'VALIDATE LOSSES: {avg_losses}')
 
@@ -209,12 +212,12 @@ def model_test(net, dataset, criterion):
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
 
-        print(f'Testing: {i + 1:03d}/{g.tests_dataset["num_repeats"]:03d} (loss={loss.item() / g.batch_size:.6f})\033[K\033[G', end='')
+        print(f'Testing: {i + 1:03d}/{g.tests_dataset["num_repeats"]:03d} (loss={loss.item():.6f})\033[K\033[G', end='')
 
     print('\033[K\033[G', end='')
 
     for k, v in avg_losses.items():
-        avg_losses[k] /= g.tests_dataset['num_repeats'] * g.batch_size
+        avg_losses[k] /= g.tests_dataset['num_repeats']
 
     logging.debug(f'TEST LOSSES: {avg_losses}')
 
