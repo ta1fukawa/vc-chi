@@ -32,29 +32,28 @@ def main(config_path):
         tests_dataset = dataset.Dataset(g.use_same_speaker, **g.tests_dataset)
 
         vgg_criterion = vgg_perceptual_loss.VGGPerceptualLoss().to(g.device)
-        ssim_criterion = ssim_loss.SSIMLoss(channel=1).to(g.device)
+        sim_criterion = ssim_loss.SSIMLoss(channel=1).to(g.device)
 
         def criterion(c, t, r, q, c_feat, q_feat):
             c = c.unsqueeze(1); t = t.unsqueeze(1); r = r.unsqueeze(1); q = q.unsqueeze(1)
 
             r_mse_loss = torch.nn.functional.mse_loss(r, t)
-            r_vgg_loss = vgg_criterion(r, t)
-            r_ssim_loss = ssim_criterion(r, t)
-            r_loss = r_mse_loss + g.vgg_weight * r_vgg_loss + g.ssim_weight * r_ssim_loss
+            r_loss = r_mse_loss
 
-            q_mse_loss = torch.nn.functional.mse_loss(q, t)
+            q_mse_loss = torch.nn.functional.mse_loss(r, t)
             q_vgg_loss = vgg_criterion(q, t)
-            q_ssim_loss = ssim_criterion(q, t)
-            q_loss = q_mse_loss + g.vgg_weight * q_vgg_loss + g.ssim_weight * q_ssim_loss
+            q_sim_loss = sim_criterion(q, t)
+            q_loss = q_mse_loss + g.vgg_weight * q_vgg_loss + g.sim_weight * q_sim_loss
 
             code_loss = torch.nn.functional.l1_loss(q_feat, c_feat)
 
             loss = r_loss + q_loss + code_loss
 
             losses = {
-                'r_mse_loss': r_mse_loss, 'r_vgg_loss': r_vgg_loss, 'r_ssim_loss': r_ssim_loss, 'r_loss': r_loss,
-                'q_mse_loss': q_mse_loss, 'q_vgg_loss': q_vgg_loss, 'q_ssim_loss': q_ssim_loss, 'q_loss': q_loss,
-                'code_loss': code_loss, 'loss': loss,
+                'r_mse_loss': r_mse_loss, 'r_loss': r_loss,
+                'q_mse_loss': q_mse_loss, 'q_vgg_loss': q_vgg_loss, 'q_sim_loss': q_sim_loss, 'q_loss': q_loss,
+                'code_loss': code_loss,
+                'loss': loss,
             }
 
             return loss, losses

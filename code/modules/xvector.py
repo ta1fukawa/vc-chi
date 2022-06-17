@@ -55,40 +55,84 @@ class Net(torch.nn.Module):
         x = torch.nn.functional.relu(emb)
 
         if self.mode == 'small':
-            x1 = torch.nn.functional.log_softmax(self.line6a(x), dim=-1)
-            return x1, emb
+            x = torch.nn.functional.log_softmax(self.line6a(x), dim=-1)
         elif self.mode == 'large':
-            x2 = torch.nn.functional.log_softmax(self.line6b(x), dim=-1)
-            return x2, emb
+            x = torch.nn.functional.log_softmax(self.line6b(x), dim=-1)
+
+        return x, emb
 
     def set_train_mode(self, mode):
         self.mode = mode
 
 
-class NetOld1(torch.nn.Module):
-    def __init__(self):
+class Net2(torch.nn.Module):
+    def __init__(self, nclasses=16):
         super().__init__()
 
-        self.tdnn1 = mp.TDNN(g.num_mels, 512, 5, 1, dropout_p=0.5)
-        self.tdnn2 = mp.TDNN(512, 512, 3, 1, dropout_p=0.5)
-        self.tdnn3 = mp.TDNN(512, 512, 2, 2, dropout_p=0.5)
-        self.tdnn4 = mp.TDNN(512, 512, 1, 1, dropout_p=0.5)
-        self.tdnn5 = mp.TDNN(512, 512, 1, 3, dropout_p=0.5)
-        self.segment6 = torch.nn.Linear(1024, 512)
-        self.segment7 = torch.nn.Linear(512, 512)
-        self.output = torch.nn.Linear(512, g.train_dataset['speaker_end'] - g.train_dataset['speaker_start'])
-        self.softmax = torch.nn.Softmax(dim=1)
+        self.conv1a = torch.nn.Conv2d(1,  64, kernel_size=(5, 5), dilation=(1, 1), padding='same')
+        self.conv1b = torch.nn.Conv2d(64, 64, kernel_size=(5, 5), dilation=(1, 1), padding='same')
+        self.drop1  = torch.nn.Dropout2d(p=0.2)
+        self.pool1  = torch.nn.MaxPool2d(kernel_size=(1, 4))
 
-    def forward(self, inputs):
-        tdnn1_out = self.tdnn1(inputs)
-        tdnn2_out = self.tdnn2(tdnn1_out)
-        tdnn3_out = self.tdnn3(tdnn2_out)
-        tdnn4_out = self.tdnn4(tdnn3_out)
-        tdnn5_out = self.tdnn5(tdnn4_out)
-        mean = torch.mean(tdnn5_out, dim=1)
-        std = torch.std(tdnn5_out, dim=1)
-        stat_pooling = torch.cat((mean, std), dim=1)
-        segment6_out = self.segment6(stat_pooling)
-        x_vec = self.segment7(segment6_out)
-        predictions = self.softmax(self.output(x_vec))
-        return predictions, x_vec
+        self.conv2a = torch.nn.Conv2d(64,  128, kernel_size=(5, 5), dilation=(1, 1), padding='same')
+        self.conv2b = torch.nn.Conv2d(128, 128, kernel_size=(5, 5), dilation=(1, 1), padding='same')
+        self.drop2  = torch.nn.Dropout2d(p=0.2)
+        self.pool2  = torch.nn.MaxPool2d(kernel_size=(1, 4))
+
+        self.conv3a = torch.nn.Conv2d(128, 256, kernel_size=(5, 5), dilation=(1, 1), padding='same')
+        self.conv3b = torch.nn.Conv2d(256, 256, kernel_size=(5, 5), dilation=(1, 1), padding='same')
+        self.drop3  = torch.nn.Dropout2d(p=0.2)
+        self.pool3  = torch.nn.MaxPool2d(kernel_size=(1, 4))
+
+        self.conv4  = torch.nn.Conv2d(256, 2048, kernel_size=(5, 5), dilation=(1, 1), padding='same')
+        self.line4  = torch.nn.Linear(2048, 512)
+
+        self.drop4 = torch.nn.Dropout(p=0.2)
+
+        self.line5 = torch.nn.Linear(512, 1024)
+        self.drop5 = torch.nn.Dropout(p=0.2)
+
+        self.line6a = torch.nn.Linear(1024, 16)
+        self.line6b = torch.nn.Linear(1024, 80)
+
+        self.mode = 'small'
+
+    def _max_pooling(self, x):
+        return x.max(dim=3)[0].max(dim=2)[0]
+
+    def forward(self, x):
+        x = x.unsqueeze(1)
+
+        x = torch.nn.functional.relu(self.conv1a(x))
+        x = torch.nn.functional.relu(self.conv1b(x))
+        x = self.drop1(x)
+        x = self.pool1(x)
+
+        x = torch.nn.functional.relu(self.conv2a(x))
+        x = torch.nn.functional.relu(self.conv2b(x))
+        x = self.drop2(x)
+        x = self.pool2(x)
+
+        x = torch.nn.functional.relu(self.conv3a(x))
+        x = torch.nn.functional.relu(self.conv3b(x))
+        x = self.drop3(x)
+        x = self.pool3(x)
+
+        x = self.conv4(x)
+        x = self._max_pooling(x)
+        emb = self.line4(x)
+        x = torch.nn.functional.relu(emb)
+        x = self.drop4(x)
+
+        x = torch.nn.functional.relu(self.line5(x))
+        x = self.drop5(x)
+
+        if self.mode == 'small':
+            x = torch.nn.functional.log_softmax(self.line6a(x), dim=-1)
+        elif self.mode == 'large':
+            x = torch.nn.functional.log_softmax(self.line6b(x), dim=-1)
+
+        return x, emb
+
+    def set_train_mode(self, mode):
+        self.mode = mode

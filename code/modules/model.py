@@ -3,22 +3,21 @@ import torch
 from modules import global_value as g
 from modules import model_parts as mp
 
+
 class Net(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
         self.content_enc = ContentEncoder()
-        self.style_enc   = StyleEncoder()
         self.decoder = Decoder()
         self.postnet = Postnet()
 
-    def forward(self, c: torch.Tensor, s: torch.Tensor):
-        c_emb = self.style_enc(c)
-        s_emb = self.style_enc(s)
-        code  = self.content_enc(c, c_emb)
-        r     = self.decoder(code, s_emb)
+    def forward(self, c: torch.Tensor, c_emb: torch.Tensor, s_emb: torch.Tensor):
+        feat  = self.content_enc(c, c_emb)
+        r     = self.decoder(feat, s_emb)
         q     = r + self.postnet(r)
         return q
+
 
 class ContentEncoder(torch.nn.Module):
     def __init__(self):
@@ -50,19 +49,6 @@ class ContentEncoder(torch.nn.Module):
 
         return x
 
-class StyleEncoder(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-
-        self.lstm = torch.nn.LSTM(g.num_mels, 768, 3, batch_first=True)
-        self.line = mp.Layer(768, g.style_dim, layer='linear')
-
-    def forward(self, x: torch.Tensor):
-        _, (hn, _) = self.lstm(x)
-        x = self.line(hn[-1])
-        x = x.div(x.norm(p=2, dim=-1, keepdim=True))
-
-        return x
 
 class Decoder(torch.nn.Module):
     def __init__(self):
@@ -75,9 +61,9 @@ class Decoder(torch.nn.Module):
         self.lstm2 = torch.nn.LSTM(512, 1024, 2, batch_first=True)
         self.line = mp.Layer(1024, g.num_mels, layer='linear')
 
-    def forward(self, code: torch.Tensor, s_emb: torch.Tensor):
-        s_emb = s_emb.unsqueeze(1).expand(-1, code.size(1), -1)  # Expand to time dimension
-        x = torch.cat([code, s_emb], dim=-1)  # Concatenate in frequency dimension
+    def forward(self, feat: torch.Tensor, s_emb: torch.Tensor):
+        s_emb = s_emb.unsqueeze(1).expand(-1, feat.size(1), -1)  # Expand to time dimension
+        x = torch.cat([feat, s_emb], dim=-1)  # Concatenate in frequency dimension
 
         x, _ = self.lstm1(x)
 
@@ -91,6 +77,7 @@ class Decoder(torch.nn.Module):
         x = self.line(x)
 
         return x
+
 
 class Postnet(torch.nn.Module):
     def __init__(self):

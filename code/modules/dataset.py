@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import pathlib
+
 from modules import global_value as g
 
 
@@ -33,8 +34,8 @@ class Dataset(torch.utils.data.Dataset):
             np.random.seed(i)
 
             if self.use_same_speaker:
-                speech_indices = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
                 speaker_indices = np.random.choice(len(self.files), g.batch_size, replace=False)
+                speech_indices  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
 
                 data = torch.stack([
                     self.padding(torch.load(self.files[speaker_index][speech_index]))
@@ -50,9 +51,9 @@ class Dataset(torch.utils.data.Dataset):
                 speech_indices = torch.from_numpy(speech_indices).long()
                 yield data, data, emb, emb, (speaker_indices, speech_indices, speaker_indices)
             else:
-                c_speech_indices  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
                 c_speaker_indices = np.random.choice(len(self.files), g.batch_size, replace=False)
                 s_speaker_indices = np.random.choice(len(self.files), g.batch_size, replace=False)
+                c_speech_indices  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
 
                 c_data = torch.stack([
                     self.padding(torch.load(self.files[speaker_index][speech_index]))
