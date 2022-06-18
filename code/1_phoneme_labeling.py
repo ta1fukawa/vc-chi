@@ -42,17 +42,17 @@ def main(config_path):
             f.seek(0)
 
             args = {
-            'wav_file': tmp_wav_path,
-            'input_yomi_file': pathlib.Path(f.name),
-            'output_seg_file': lab_dir / f'{wav.stem}.lab',
-            'input_yomi_type': 'katakana',
-            'like_openjtalk': False,
-            'input_text_file': None,
-            'output_text_file': None,
-            'hmm_model': g.hmm_path,
-            'model_type': ModelType.gmm,
-            'padding_second': 0,
-            'options': None
+                'wav_file': tmp_wav_path,
+                'input_yomi_file': pathlib.Path(f.name),
+                'output_seg_file': lab_dir / f'{wav.stem}.lab',
+                'input_yomi_type': 'katakana',
+                'like_openjtalk': False,
+                'input_text_file': None,
+                'output_text_file': None,
+                'hmm_model': g.hmm_path,
+                'model_type': ModelType.gmm,
+                'padding_second': 0,
+                'options': None
             }
 
             try:

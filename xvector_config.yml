@@ -29,20 +29,20 @@ small_dataset:
   num_repeats   : 100
   speaker_start : 0
   speaker_end   : 20
-  speech_start  : 0
-  speech_end    : 80
+  phoneme_start : 0
+  phoneme_end   : 5120
 medium_dataset:
   num_repeats   : 100
   speaker_start : 0
   speaker_end   : 40
-  speech_start  : 0
-  speech_end    : 80
+  phoneme_start : 0
+  phoneme_end   : 5120
 large_dataset:
   num_repeats   : 100
   speaker_start : 0
   speaker_end   : 80
-  speech_start  : 0
-  speech_end    : 80
+  phoneme_start : 0
+  phoneme_end   : 5120
 
 # Dataset
 wav_dir : './dataset/seiren_jvs011/wav'
@@ -87,3 +87,5 @@ waveglow:
 # Model (xvector)
 seg_len     : 128
 style_dim   : 128
+
+pnm_len : 32

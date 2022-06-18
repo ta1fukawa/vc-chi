@@ -10,23 +10,23 @@ class Dataset(torch.utils.data.Dataset):
         self.use_same_speaker = use_same_speaker
         self.num_repeats = num_repeats
 
-        speakers = sorted(list(pathlib.Path(g.mel_dir).glob('*')))
+        speakers = sorted(pathlib.Path(g.mel_dir).iterdir())
         speakers = speakers[speaker_start:speaker_end]
         self.speakers = speakers
 
         self.files = []
         for speaker in speakers:
-            speeches = sorted(list(speaker.glob('*.pt')))
+            speeches = sorted(speaker.iterdir())
             speeches = speeches[speech_start:speech_end]
 
             self.files.append(speeches)
 
-    def padding(self, data):
-        if len(data) < g.seg_len:
-            len_pad = g.seg_len - len(data)
+    def padding(self, data, length):
+        if len(data) < length:
+            len_pad = length - len(data)
             data = torch.cat((data, torch.zeros(len_pad, data.shape[1])), dim=0)
         else:
-            data = data[:g.seg_len]
+            data = data[:length]
         return data
 
     def __iter__(self):
@@ -34,11 +34,11 @@ class Dataset(torch.utils.data.Dataset):
             np.random.seed(i)
 
             if self.use_same_speaker:
-                speaker_indices = np.random.choice(len(self.files), g.batch_size, replace=False)
+                speaker_indices = np.random.choice(len(self.files),    g.batch_size, replace=False)
                 speech_indices  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
 
                 data = torch.stack([
-                    self.padding(torch.load(self.files[speaker_index][speech_index]))
+                    self.padding(torch.load(self.files[speaker_index][speech_index]), g.seg_len)
                     for speaker_index, speech_index in zip(speaker_indices, speech_indices)
                 ], dim=0)
 
@@ -51,16 +51,16 @@ class Dataset(torch.utils.data.Dataset):
                 speech_indices  = torch.from_numpy(speech_indices).long()
                 yield data, data, emb, emb, (speaker_indices, speech_indices, speaker_indices)
             else:
-                c_speaker_indices = np.random.choice(len(self.files), g.batch_size, replace=False)
-                s_speaker_indices = np.random.choice(len(self.files), g.batch_size, replace=False)
+                c_speaker_indices = np.random.choice(len(self.files),    g.batch_size, replace=False)
+                s_speaker_indices = np.random.choice(len(self.files),    g.batch_size, replace=False)
                 c_speech_indices  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
 
                 c_data = torch.stack([
-                    self.padding(torch.load(self.files[speaker_index][speech_index]))
+                    self.padding(torch.load(self.files[speaker_index][speech_index]), g.seg_len)
                     for speaker_index, speech_index in zip(c_speaker_indices, c_speech_indices)
                 ], dim=0)
                 t_data = torch.stack([
-                    self.padding(torch.load(self.files[speaker_index][speech_index]))
+                    self.padding(torch.load(self.files[speaker_index][speech_index]), g.seg_len)
                     for speaker_index, speech_index in zip(s_speaker_indices, c_speech_indices)
                 ], dim=0)
 

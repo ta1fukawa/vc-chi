@@ -2,14 +2,11 @@ import argparse
 import csv
 import logging
 import pathlib
-import sys
-import tempfile
 import traceback
 
 import librosa
 import numpy as np
 import pyworld
-import torch
 
 from modules import audio, common
 from modules import global_value as g
@@ -25,7 +22,7 @@ def main(config_path):
     pnm_dir.mkdir(parents=True, exist_ok=True)
 
     for speaker in sorted(wav_dir.iterdir()):
-        speaker_pnm = []
+        speaker_pnm = []  # len(speaker_pnm) == 6515 (when using JVS corpus)
 
         for wav in sorted(speaker.iterdir()):
             if not wav.is_file() or wav.suffix != '.wav':
