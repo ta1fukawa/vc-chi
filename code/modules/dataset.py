@@ -1,6 +1,8 @@
+import pathlib
+import tempfile
+
 import numpy as np
 import torch
-import pathlib
 
 from modules import global_value as g
 
@@ -22,14 +24,6 @@ class MelDataset(torch.utils.data.Dataset):
             self.files.append(speeches)
 
         self.set_seed(0)
-
-    def padding(self, data, length):
-        if len(data) < length:
-            len_pad = length - len(data)
-            data = torch.cat((data, torch.zeros(len_pad, data.shape[1])), dim=0)
-        else:
-            data = data[:length]
-        return data
 
     def __iter__(self):
         for _ in range(self.num_repeats):
@@ -81,8 +75,16 @@ class MelDataset(torch.utils.data.Dataset):
     def set_seed(self, seed):
         self.rand_state = np.random.RandomState(seed)
 
+    def padding(self, data, length):
+        if len(data) < length:
+            len_pad = length - len(data)
+            data = torch.cat((data, torch.zeros(len_pad, data.shape[1])), dim=0)
+        else:
+            data = data[:length]
+        return data
 
-class PnmDataset(torch.utils.data.Dataset):
+
+class PnmDatasetStatic(torch.utils.data.Dataset):
     def __init__(self, num_repeats, speaker_start=None, speaker_end=None, phoneme_start=None, phoneme_end=None):
         self.num_repeats = num_repeats
 
@@ -96,14 +98,6 @@ class PnmDataset(torch.utils.data.Dataset):
             self.data.append(speaker_pnm)
 
         self.set_seed(0)
-
-    def padding(self, data, length):
-        if len(data) < length:
-            len_pad = length - len(data)
-            data = torch.cat((data, torch.zeros(len_pad, data.shape[1])), dim=0)
-        else:
-            data = data[:length]
-        return data
 
     def __iter__(self):
         for _ in range(self.num_repeats):
@@ -121,3 +115,61 @@ class PnmDataset(torch.utils.data.Dataset):
 
     def set_seed(self, seed):
         self.rand_state = np.random.RandomState(seed)
+
+    def padding(self, data, length):
+        if len(data) < length:
+            len_pad = length - len(data)
+            data = torch.cat((data, torch.zeros(len_pad, data.shape[1])), dim=0)
+        else:
+            data = data[:length]
+        return data
+
+
+class PnmDatasetDynamic(torch.utils.data.Dataset):
+    def __init__(self, num_repeats, speaker_start=None, speaker_end=None, phoneme_start=None, phoneme_end=None):
+        self.num_repeats = num_repeats
+
+        org_pnm_paths = sorted(pathlib.Path(g.pnm_dir).iterdir())
+        org_pnm_paths = org_pnm_paths[speaker_start:speaker_end]
+
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.tmp_dir_path = pathlib.Path(self.tmp_dir.name)
+
+        self.files = []
+        for org_pnm_path in org_pnm_paths:
+            speaker_pnm = np.load(org_pnm_path, allow_pickle=True)
+            speaker_pnm = speaker_pnm[phoneme_start:phoneme_end]
+
+            (self.tmp_dir_path / f'{org_pnm_path.stem}').mkdir(exist_ok=True)
+
+            for i, single_pnm in enumerate(speaker_pnm):
+                torch.save(single_pnm, self.tmp_dir_path / f'{org_pnm_path.stem}/{i:06d}.pt')
+
+            self.files.append(sorted((self.tmp_dir_path / f'{org_pnm_path.stem}').iterdir()))
+
+        self.set_seed(0)
+
+    def __iter__(self):
+        for _ in range(self.num_repeats):
+            speaker_indices = self.rand_state.choice(len(self.files),    g.batch_size, replace=False)
+            phoneme_indices = self.rand_state.choice(len(self.files[0]), g.batch_size, replace=False)
+
+            data = torch.stack([
+                self.padding(torch.load(self.files[speaker_index][phoneme_index]), g.pnm_len)
+                for speaker_index, phoneme_index in zip(speaker_indices, phoneme_indices)
+            ], dim=0)
+
+            speaker_indices = torch.from_numpy(speaker_indices).long()
+            phoneme_indices = torch.from_numpy(phoneme_indices).long()
+            yield data, (speaker_indices, phoneme_indices)
+
+    def set_seed(self, seed):
+        self.rand_state = np.random.RandomState(seed)
+
+    def padding(self, data, length):
+        if len(data) < length:
+            len_pad = length - len(data)
+            data = torch.cat((data, torch.zeros(len_pad, data.shape[1])), dim=0)
+        else:
+            data = data[:length]
+        return data

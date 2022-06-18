@@ -1,6 +1,7 @@
 # Root
 extract_envelope : false
 model_load_path  : null
+dataset_dynamic  : true
 
 # ML
 log_interval : 100
@@ -45,8 +46,8 @@ wav_dir : './dataset/seiren_jvs011/wav'
 lab_dir : './dataset/seiren_jvs011/lab'
 pnm_mel_dir : './dataset/seiren_jvs011/pnm_mel_all'  # Save directory for mel-spectrogram
 pnm_spc_dir : './dataset/seiren_jvs011/pnm_spc_all'  # Save directory for spectrogram
-pnm_dir : './dataset/seiren_jvs011/pnm_spc_all'      # Load target directory
-emb_dir : './dataset/seiren_jvs011/emb_spc_all'
+pnm_dir : './dataset/seiren_jvs011/pnm_mel_all'      # Load target directory
+emb_dir : './dataset/seiren_jvs011/emb_mel_all'
 mel_dir : './dataset/seiren_jvs011/mel'
 
 kana_path : './dataset/jvs_hiho/voiceactoress100_spaced_julius.txt'
