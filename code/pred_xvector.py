@@ -6,8 +6,8 @@ import traceback
 import numpy as np
 import torch
 
-from modules import audio, common, dataset
 from modules import global_value as g
+from modules import audio, common, dataset
 from modules import xvector, ssim_loss, vgg_perceptual_loss
 
 

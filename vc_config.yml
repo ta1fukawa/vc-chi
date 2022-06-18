@@ -11,12 +11,12 @@ batch_size   : 8
 stages:
   -
     optimizer  : 'adam'
-    lr         : 1.e-2
+    lr         : 1.e-3
     num_epochs : 200
     patience   : 20
   -
     optimizer  : 'sgd'
-    lr         : 1.e-1
+    lr         : 1.e-2
     momentum   : 0.9
     num_epochs : 400
     patience   : 40
@@ -47,8 +47,8 @@ tests_dataset:
 
 # Dataset
 wav_dir : './dataset/jvs/wav'
-mel_dir : './archive/mel_old_01'
-emb_dir : './archive/emb_old_01'
+mel_dir : './dataset/jvs/mel'
+emb_dir : './dataset/jvs/emb'
 
 predict:
   source_speaker : 'jvs091'
@@ -87,7 +87,7 @@ waveglow:
 
 # Model (xvector)
 seg_len     : 128
-style_dim   : 256
+style_dim   : 128
 
 # Model (vc)
 dim_neck    : 32

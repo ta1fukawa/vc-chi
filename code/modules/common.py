@@ -71,8 +71,9 @@ def custom_init(
 
     for k, v in config.items():
         setattr(g, k, v)
-    for k, v in config[g.vocoder].items():
-        setattr(g, k, v)
+    if 'vocoder' in config:
+        for k, v in config[g.vocoder].items():
+            setattr(g, k, v)
 
     if torch.cuda.is_available():
         g.device = torch.device('cuda')

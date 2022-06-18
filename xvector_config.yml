@@ -13,13 +13,13 @@ stages:
     lr         : 1.e-3
     num_epochs : 400
     patience   : 20
-  -
-    mode       : 'large'
-    optimizer  : 'sgd'
-    lr         : 1.e-1
-    momentum   : 0.9
-    num_epochs : 400
-    patience   : 20
+  # -
+  #   mode       : 'large'
+  #   optimizer  : 'sgd'
+  #   lr         : 1.e-2
+  #   momentum   : 0.9
+  #   num_epochs : 400
+  #   patience   : 20
 
 vgg_weight  : 0.01
 ssim_weight : 0.1
@@ -44,9 +44,13 @@ large_dataset:
   speech_end    : 80
 
 # Dataset
-wav_dir : './dataset/jvs/wav'
-mel_dir : './dataset/jvs/mel'
-emb_dir : './dataset/jvs/emb'
+wav_dir : './dataset/seiren_jvs011/wav'
+lab_dir : './dataset/seiren_jvs011/lab'
+mel_dir : './dataset/seiren_jvs011/mel'
+emb_dir : './dataset/seiren_jvs011/emb'
+
+kana_path : './dataset/jvs_hiho/voiceactoress100_spaced_julius.txt'
+hmm_path  : './dataset/dictation-kit-4.5/model/phone_m/jnas-mono-16mix-gid.binhmm'
 
 # Audio
 highpass_cutoff : 70.0

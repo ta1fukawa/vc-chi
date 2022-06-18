@@ -245,7 +245,7 @@ def predict(net, stage_no, source_speaker, target_speaker, speech):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_path', type=pathlib.Path, default='config.yml')
+    parser.add_argument('--config_path', type=pathlib.Path, default='vc_config.yml')
 
     try:
         main(**vars(parser.parse_args()))

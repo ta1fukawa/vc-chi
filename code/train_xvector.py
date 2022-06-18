@@ -3,7 +3,6 @@ import logging
 import pathlib
 import traceback
 
-import matplotlib; matplotlib.use('Agg')
 import torch
 import torch.utils.tensorboard
 
