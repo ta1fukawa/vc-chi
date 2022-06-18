@@ -3,17 +3,14 @@ import logging
 import pathlib
 import traceback
 
-import matplotlib; matplotlib.use('Agg')
 import torch
 import torch.utils.tensorboard
 
+from modules import audio, common, dataset
 from modules import global_value as g
-from modules import common
-from modules import dataset
-from modules import model
-from modules import audio
-from modules import vgg_perceptual_loss
-from modules import ssim_loss
+from modules import model, ssim_loss, vgg_perceptual_loss
+
+import matplotlib; matplotlib.use('Agg')
 
 
 def main(config_path):
@@ -103,8 +100,9 @@ def main(config_path):
                             logging.info(f'EARLY STOPPING: {patience}')
                             break
 
-                        sw.add_scalars('train', train_loss, total_epoch)
-                        sw.add_scalars('valdt', valdt_loss, total_epoch)
+
+                        for key in train_loss.keys():
+                            sw.add_scalars(key, {'train': train_loss[key], 'valdt': valdt_loss[key]}, total_epoch)
                         sw.flush()
 
                         total_epoch += 1
@@ -120,9 +118,6 @@ def main(config_path):
                 tests_loss = model_test(net, tests_dataset, criterion)
 
                 logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, TEST LOSS: {tests_loss["loss"]:.6f}')
-
-                sw.add_scalars('tests', tests_loss, stage_no)
-                sw.flush()
 
                 if g.need_predict:
                     predict(net, stage_no, **g.predict)

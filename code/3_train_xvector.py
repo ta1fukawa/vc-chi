@@ -6,11 +6,9 @@ import traceback
 import torch
 import torch.utils.tensorboard
 
+from modules import common, dataset
 from modules import global_value as g
-from modules import common
-from modules import dataset
 from modules import xvector
-from modules import audio
 
 
 def main(config_path):
@@ -88,8 +86,8 @@ def main(config_path):
                         logging.info(f'EARLY STOPPING: {patience}')
                         break
 
-                    sw.add_scalars('train', train_loss, total_epoch)
-                    sw.add_scalars('valdt', valdt_loss, total_epoch)
+                    for key in train_loss.keys():
+                        sw.add_scalars(key, {'train': train_loss[key], 'valdt': valdt_loss[key]}, total_epoch)
                     sw.flush()
 
                     total_epoch += 1
@@ -106,9 +104,6 @@ def main(config_path):
 
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.10f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.10f}, TEST LOSS: {tests_loss["loss"]:.10f}')
             logging.info(f'BEST TRAIN ACC: {best_train_loss["acc"]:.4f}, BEST VALDT ACC: {best_valdt_loss["acc"]:.4f}, TEST ACC: {tests_loss["acc"]:.4f}')
-
-            sw.add_scalars('tests', tests_loss, stage_no)
-            sw.flush()
 
 
 def model_train(net, dataset, criterion, optimizer):
@@ -132,7 +127,7 @@ def model_train(net, dataset, criterion, optimizer):
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
 
         print(f'Training: {i + 1:03d}/{g.train_dataset["num_repeats"]:03d} (loss={loss.item():.10f}, acc={losses["acc"].item():.4f})\033[K\033[G', end='')
-    
+
     print('\033[K\033[G', end='')
 
     for k, v in avg_losses.items():
@@ -191,7 +186,7 @@ def model_test(net, dataset, criterion):
 
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
-        
+
         print(f'Testing: {i + 1:03d}/{g.tests_dataset["num_repeats"]:03d} (loss={loss.item():.10f}, acc={losses["acc"].item():.4f})\033[K\033[G', end='')
 
     print('\033[K\033[G', end='')

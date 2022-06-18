@@ -46,9 +46,8 @@ tests_dataset:
   speech_end    : 100
 
 # Dataset
-wav_dir : './dataset/jvs/wav'
-mel_dir : './dataset/jvs/mel'
-emb_dir : './dataset/jvs/emb'
+mel_dir : './dataset/seiren_jvs011/mel'
+emb_dir : './dataset/seiren_jvs011/emb'
 
 predict:
   source_speaker : 'jvs091'

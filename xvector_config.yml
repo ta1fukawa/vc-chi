@@ -1,27 +1,23 @@
 # Root
-use_same_speaker : true
 extract_envelope : false
-model_load_path  : null
+model_load_path  : 'wd/3_train_xvector/20220618/185956/cp/0_best_valdt.pth'
 
 # ML
 log_interval : 100
-batch_size   : 32
+batch_size   : 80
 
 stages:
   -
     optimizer  : 'adam'
-    lr         : 1.e-4
+    lr         : 1.e-3
     num_epochs : 4000
     patience   : 40
   -
     optimizer  : 'sgd'
-    lr         : 1.e-2
+    lr         : 1.e-1
     momentum   : 0.9
     num_epochs : 4000
     patience   : 40
-
-vgg_weight  : 0.01
-ssim_weight : 0.1
 
 train_dataset:
   num_repeats   : 200

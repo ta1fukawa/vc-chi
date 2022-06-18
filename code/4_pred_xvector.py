@@ -3,12 +3,11 @@ import logging
 import pathlib
 import traceback
 
-import numpy as np
 import torch
 
+from modules import audio, common
 from modules import global_value as g
-from modules import audio, common, dataset
-from modules import xvector, ssim_loss, vgg_perceptual_loss
+from modules import xvector
 
 
 def main(config_path):
