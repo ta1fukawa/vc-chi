@@ -1,3 +1,8 @@
 {
-    "python.analysis.extraPaths": ["./code", "./code/julius4seg"]
+    "python.analysis.extraPaths": ["./code", "./code/julius4seg"],
+    "files.watcherExclude": {
+        "archive": true,
+        "dataset": true,
+        "wd": true
+    }
 }

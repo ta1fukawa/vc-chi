@@ -1,6 +1,6 @@
 # Root
 extract_envelope : false
-model_load_path  : 'wd/3_train_xvector/20220618/185956/cp/0_best_valdt.pth'
+model_load_path  : null
 
 # ML
 log_interval : 100
@@ -43,9 +43,11 @@ tests_dataset:
 # Dataset
 wav_dir : './dataset/seiren_jvs011/wav'
 lab_dir : './dataset/seiren_jvs011/lab'
-pnm_dir : './dataset/seiren_jvs011/pnm'
+pnm_mel_dir : './dataset/seiren_jvs011/pnm_mel_all'  # Save directory for mel-spectrogram
+pnm_spc_dir : './dataset/seiren_jvs011/pnm_spc_all'  # Save directory for spectrogram
+pnm_dir : './dataset/seiren_jvs011/pnm_spc_all'      # Load target directory
+emb_dir : './dataset/seiren_jvs011/emb_spc_all'
 mel_dir : './dataset/seiren_jvs011/mel'
-emb_dir : './dataset/seiren_jvs011/emb'
 
 kana_path : './dataset/jvs_hiho/voiceactoress100_spaced_julius.txt'
 hmm_path  : './dataset/dictation-kit-4.5/model/phone_m/jnas-mono-16mix-gid.binhmm'
@@ -55,30 +57,14 @@ highpass_cutoff : 70.0
 
 vocoder : 'melgan'
 
-melgan:
-  sample_rate : 24000
-  fft_size    : 1024
-  num_mels    : 80
-  fmin        : 80    # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
-  fmax        : 7600  # To be increased/reduced depending on data.
-  hop_size    : 300
-  win_length  : 1024
-  window      : 'hann'
-
-  wavegan_model_path : './model/train_nodev_jsut_multi_band_melgan.v2/checkpoint-1000000steps.pkl'
-  wavegan_stats_path : './model/train_nodev_jsut_multi_band_melgan.v2/stats.h5'
-  # wavegan_model_path : './model/TSUKUYOMICHAN_MODEL_v.1.2.0/VOCODER/checkpoint-300000steps.pkl'
-  # wavegan_stats_path : './model/TSUKUYOMICHAN_MODEL_v.1.2.0/VOCODER/stats.h5'
-
-waveglow:
-  sample_rate : 22050
-  fft_size    : 1024
-  num_mels    : 80
-  fmin        : 0     # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
-  fmax        : 8000  # To be increased/reduced depending on data.
-  hop_size    : 256
-  win_length  : 1024
-  window      : 'hann'
+sample_rate : 24000
+fft_size    : 1024
+num_mels    : 80
+fmin        : 80    # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
+fmax        : 7600  # To be increased/reduced depending on data.
+hop_size    : 120
+win_length  : 1024
+window      : 'hann'
 
 # Model (xvector)
 seg_len     : 128

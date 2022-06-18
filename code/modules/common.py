@@ -71,7 +71,7 @@ def custom_init(
 
     for k, v in config.items():
         setattr(g, k, v)
-    if 'vocoder' in config:
+    if 'vocoder' in config and g.vocoder in config:
         for k, v in config[g.vocoder].items():
             setattr(g, k, v)
 

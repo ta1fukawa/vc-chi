@@ -17,12 +17,15 @@ def main(config_path):
 
     wav_dir = pathlib.Path(g.wav_dir)
     lab_dir = pathlib.Path(g.lab_dir)
-    pnm_dir = pathlib.Path(g.pnm_dir)
+    pnm_mel_dir = pathlib.Path(g.pnm_mel_dir)
+    pnm_spc_dir = pathlib.Path(g.pnm_spc_dir)
 
-    pnm_dir.mkdir(parents=True, exist_ok=True)
+    pnm_mel_dir.mkdir(parents=True, exist_ok=True)
+    pnm_spc_dir.mkdir(parents=True, exist_ok=True)
 
     for speaker in sorted(wav_dir.iterdir()):
-        speaker_pnm = []  # len(speaker_pnm) == 6515 (when using JVS corpus)
+        speaker_pnm_spc = []
+        speaker_pnm_mel = []
 
         for wav in sorted(speaker.iterdir()):
             if not wav.is_file() or wav.suffix != '.wav':
@@ -49,8 +52,11 @@ def main(config_path):
                     start_frame = max(int(float(start_sec) * separation_rate), 0)
                     end_frame   = min(int(float(end_sec)   * separation_rate), len(sp))
 
-                    pnm_frame = sp[start_frame:end_frame]
-                    speaker_pnm.append(pnm_frame)
+                    spc = sp[start_frame:end_frame].T
+                    mel = audio.spec2mel(spc)
+
+                    speaker_pnm_spc.append(spc.T)
+                    speaker_pnm_mel.append(mel)
             else:
                 for start_sec, end_sec, phoneme in labels:
                     if phoneme in ['silB', 'silE', 'sp']:
@@ -59,11 +65,14 @@ def main(config_path):
                     start_sample = int(float(start_sec) * sr)
                     end_sample   = int(float(end_sec)   * sr)
 
-                    pnm = audio.wave2mel(wave[start_sample:end_sample])
-                    speaker_pnm.append(pnm)
+                    spc = audio.wave2spec(wave[start_sample:end_sample])
+                    mel = audio.spec2mel(spc)
 
-        pnm_path = pnm_dir / f'{speaker.name}.npy'
-        np.save(pnm_path, speaker_pnm)
+                    speaker_pnm_spc.append(spc.T)
+                    speaker_pnm_mel.append(mel)
+
+        np.save(pnm_spc_dir / f'{speaker.name}.npy', speaker_pnm_spc)
+        np.save(pnm_mel_dir / f'{speaker.name}.npy', speaker_pnm_mel)
 
 
 def extract_acoustic_features(wave, sr, mode='dio'):

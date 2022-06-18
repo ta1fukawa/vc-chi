@@ -134,7 +134,7 @@ def save(name, mel=None, wave=None, vmin=-10, vmax=2, ext='pt'):
 
 
 g._mel_basis = None
-def wave2mel(wave):
+def gen_mel_basis():
     if g._mel_basis is None:
         g._mel_basis = librosa.filters.mel(
             sr=g.sample_rate,
@@ -144,6 +144,15 @@ def wave2mel(wave):
             fmax=g.fmax
         )
 
+
+def wave2mel(wave):
+    spec = wave2spec(wave)
+    mel  = spec2mel(spec)
+
+    return mel
+
+
+def wave2spec(wave):
     spec = librosa.stft(
         wave,
         n_fft=g.fft_size,
@@ -152,6 +161,25 @@ def wave2mel(wave):
         window=g.window,
         pad_mode='constant'
     )
+
+    return spec.astype(np.float32)
+
+
+def spec2wave(spec):
+    wave = librosa.istft(
+        spec,
+        hop_length=g.hop_size,
+        win_length=g.win_length,
+        window=g.window,
+        length=len(spec) * g.hop_size
+    )
+
+    return wave
+
+
+def spec2mel(spec):
+    gen_mel_basis()
+
     mel = np.dot(g._mel_basis, np.abs(spec)).T
     if g.vocoder == 'melgan':
         mel = np.log10(np.clip(mel, a_min=1e-5, a_max=None))
