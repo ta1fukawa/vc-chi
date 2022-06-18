@@ -24,8 +24,8 @@ def main(config_path):
     pnm_mel_dir.mkdir(parents=True, exist_ok=True)
     pnm_spc_dir.mkdir(parents=True, exist_ok=True)
 
-    pool_obj = multiprocessing.Pool(processes=32)
-    pool_obj.map(process, sorted(wav_dir.iterdir())[38:])
+    pool = multiprocessing.Pool(processes=g.processer_num)
+    pool.map(process, sorted(wav_dir.iterdir()))
 
 
 def process(speaker):
@@ -37,11 +37,11 @@ def process(speaker):
     speaker_pnm_spc = []
     speaker_pnm_mel = []
 
+    logging.info(f'Process: {speaker.name}')
+
     for wav in sorted(speaker.iterdir()):
         if not wav.is_file() or wav.suffix != '.wav':
             continue
-
-        logging.info(f'Process: {speaker.name}/{wav.name}')
 
         wave, sr = librosa.load(wav, sr=g.sample_rate, dtype=np.float64, mono=True)
 
@@ -52,6 +52,7 @@ def process(speaker):
 
         if g.extract_envelope:
             _, sp, _ = extract_acoustic_features(wave, sr)
+            sp = sp.astype(np.float32)
 
             separation_rate = 200
 
@@ -65,8 +66,8 @@ def process(speaker):
                 spc = sp[start_frame:end_frame].T
                 mel = audio.spec2mel(spc)
 
-                speaker_pnm_spc.append(spc.T.astype(np.float32))
-                speaker_pnm_mel.append(mel.astype(np.float32))
+                speaker_pnm_spc.append(spc.T)
+                speaker_pnm_mel.append(mel)
         else:
             for start_sec, end_sec, phoneme in labels:
                 if phoneme in ['silB', 'silE', 'sp']:
@@ -78,11 +79,11 @@ def process(speaker):
                 spc = audio.wave2spec(wave[start_sample:end_sample])
                 mel = audio.spec2mel(spc)
 
-                speaker_pnm_spc.append(spc.T.astype(np.float32))
-                speaker_pnm_mel.append(mel.astype(np.float32))
+                speaker_pnm_spc.append(spc.T)
+                speaker_pnm_mel.append(mel)
 
-    np.save(pnm_spc_dir / f'{speaker.name}.npy', speaker_pnm_spc)
-    np.save(pnm_mel_dir / f'{speaker.name}.npy', speaker_pnm_mel)
+    np.save(pnm_spc_dir / f'{speaker.name}.npy', speaker_pnm_spc, allow_pickle=True)
+    np.save(pnm_mel_dir / f'{speaker.name}.npy', speaker_pnm_mel, allow_pickle=True)
 
 
 def extract_acoustic_features(wave, sr, mode='dio'):

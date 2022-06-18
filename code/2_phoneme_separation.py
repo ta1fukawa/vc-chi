@@ -27,11 +27,11 @@ def main(config_path):
         speaker_pnm_spc = []
         speaker_pnm_mel = []
 
+        logging.info(f'Process: {speaker.name}')
+
         for wav in sorted(speaker.iterdir()):
             if not wav.is_file() or wav.suffix != '.wav':
                 continue
-
-            logging.info(f'Process: {speaker.name}/{wav.name}')
 
             wave, sr = librosa.load(wav, sr=g.sample_rate, dtype=np.float64, mono=True)
 
@@ -42,6 +42,7 @@ def main(config_path):
 
             if g.extract_envelope:
                 _, sp, _ = extract_acoustic_features(wave, sr)
+                sp = sp.astype(np.float32)
 
                 separation_rate = 200
 
@@ -71,8 +72,8 @@ def main(config_path):
                     speaker_pnm_spc.append(spc.T)
                     speaker_pnm_mel.append(mel)
 
-        np.save(pnm_spc_dir / f'{speaker.name}.npy', speaker_pnm_spc)
-        np.save(pnm_mel_dir / f'{speaker.name}.npy', speaker_pnm_mel)
+        np.save(pnm_spc_dir / f'{speaker.name}.npy', speaker_pnm_spc, allow_pickle=True)
+        np.save(pnm_mel_dir / f'{speaker.name}.npy', speaker_pnm_mel, allow_pickle=True)
 
 
 def extract_acoustic_features(wave, sr, mode='dio'):

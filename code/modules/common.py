@@ -55,6 +55,8 @@ def custom_init(
     config_path: pathlib.Path,
     run_id_format: str,
 ):
+    g.tmp_dirs = []
+
     g.code_id = os.path.splitext(os.path.basename(inspect.stack()[1].filename))[0]
     g.run_id  = datetime.datetime.now().strftime(run_id_format)
 

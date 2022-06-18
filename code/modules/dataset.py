@@ -1,3 +1,5 @@
+import logging
+import multiprocessing
 import pathlib
 import tempfile
 
@@ -128,24 +130,19 @@ class PnmDatasetStatic(torch.utils.data.Dataset):
 class PnmDatasetDynamic(torch.utils.data.Dataset):
     def __init__(self, num_repeats, speaker_start=None, speaker_end=None, phoneme_start=None, phoneme_end=None):
         self.num_repeats = num_repeats
+        self.phoneme_start = phoneme_start
+        self.phoneme_end = phoneme_end
 
         org_pnm_paths = sorted(pathlib.Path(g.pnm_dir).iterdir())
         org_pnm_paths = org_pnm_paths[speaker_start:speaker_end]
 
         self.tmp_dir = tempfile.TemporaryDirectory()
         self.tmp_dir_path = pathlib.Path(self.tmp_dir.name)
+        g.tmp_dirs.append(self.tmp_dir_path)
+        logging.info(f'Created temporary directory {self.tmp_dir_path}')
 
-        self.files = []
-        for org_pnm_path in org_pnm_paths:
-            speaker_pnm = np.load(org_pnm_path, allow_pickle=True)
-            speaker_pnm = speaker_pnm[phoneme_start:phoneme_end]
-
-            (self.tmp_dir_path / f'{org_pnm_path.stem}').mkdir(exist_ok=True)
-
-            for i, single_pnm in enumerate(speaker_pnm):
-                torch.save(single_pnm, self.tmp_dir_path / f'{org_pnm_path.stem}/{i:06d}.pt')
-
-            self.files.append(sorted((self.tmp_dir_path / f'{org_pnm_path.stem}').iterdir()))
+        pool = multiprocessing.Pool(processes=g.processer_num)
+        self.files = pool.map(self.load_pnm, org_pnm_paths)
 
         self.set_seed(0)
 
@@ -162,6 +159,21 @@ class PnmDatasetDynamic(torch.utils.data.Dataset):
             speaker_indices = torch.from_numpy(speaker_indices).long()
             phoneme_indices = torch.from_numpy(phoneme_indices).long()
             yield data, (speaker_indices, phoneme_indices)
+
+    def __del__(self):
+        self.tmp_dir.cleanup()
+
+    def load_pnm(self, org_pnm_path):
+        speaker_pnm = np.load(org_pnm_path, allow_pickle=True)
+        speaker_pnm = speaker_pnm[self.phoneme_start:self.phoneme_end]
+
+        pnm_dir = self.tmp_dir_path / org_pnm_path.stem
+        pnm_dir.mkdir(exist_ok=True)
+
+        for i, single_pnm in enumerate(speaker_pnm):
+            torch.save(torch.from_numpy(single_pnm), pnm_dir / f'{i:06d}.pt')
+
+        return sorted(pnm_dir.iterdir())
 
     def set_seed(self, seed):
         self.rand_state = np.random.RandomState(seed)

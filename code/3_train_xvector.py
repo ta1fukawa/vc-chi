@@ -1,6 +1,7 @@
 import argparse
 import logging
 import pathlib
+import shutil
 import traceback
 
 import torch
@@ -215,6 +216,9 @@ if __name__ == '__main__':
         logging.error(traceback.format_exc())
         raise e
     finally:
+        for tmp_dir in g.tmp_dirs:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
         logging.info('Done')
         logging.shutdown()
 
