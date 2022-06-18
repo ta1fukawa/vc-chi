@@ -5,7 +5,7 @@ import pathlib
 from modules import global_value as g
 
 
-class Dataset(torch.utils.data.Dataset):
+class MelDataset(torch.utils.data.Dataset):
     def __init__(self, use_same_speaker, num_repeats, speaker_start=None, speaker_end=None, speech_start=None, speech_end=None):
         self.use_same_speaker = use_same_speaker
         self.num_repeats = num_repeats
@@ -77,3 +77,42 @@ class Dataset(torch.utils.data.Dataset):
                 c_speech_indices  = torch.from_numpy(c_speech_indices).long()
                 s_speaker_indices = torch.from_numpy(s_speaker_indices).long()
                 yield c_data, t_data, c_emb, s_emb, (c_speaker_indices, c_speech_indices, s_speaker_indices)
+
+
+class PnmDataset(torch.utils.data.Dataset):
+    def __init__(self, num_repeats, speaker_start=None, speaker_end=None, phoneme_start=None, phoneme_end=None):
+        self.num_repeats = num_repeats
+
+        pnm_paths = sorted(pathlib.Path(g.pnm_dir).iterdir())
+        pnm_paths = pnm_paths[speaker_start:speaker_end]
+
+        self.data = []
+        for pnm_path in pnm_paths:
+            speaker_pnm = np.load(pnm_path, allow_pickle=True)
+            speaker_pnm = speaker_pnm[phoneme_start:phoneme_end]
+            self.data.append(speaker_pnm)
+
+    def padding(self, data, length):
+        if len(data) < length:
+            len_pad = length - len(data)
+            data = torch.cat((data, torch.zeros(len_pad, data.shape[1])), dim=0)
+        else:
+            data = data[:length]
+        return data
+
+    def __iter__(self):
+        for _ in range(self.num_repeats):
+            speaker_indices = np.random.choice(len(self.data),    g.batch_size, replace=False)
+            phoneme_indices = np.random.choice(len(self.data[0]), g.batch_size, replace=False)
+
+            data = torch.stack([
+                self.padding(torch.from_numpy(self.data[speaker_index][phoneme_index]), g.pnm_len)
+                for speaker_index, phoneme_index in zip(speaker_indices, phoneme_indices)
+            ], dim=0)
+
+            speaker_indices = torch.from_numpy(speaker_indices).long()
+            phoneme_indices = torch.from_numpy(phoneme_indices).long()
+            yield data, (speaker_indices, phoneme_indices)
+
+    def sed_seed(self, seed):
+        np.random.seed(seed)

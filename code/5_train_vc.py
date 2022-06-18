@@ -27,9 +27,9 @@ def main(config_path):
         logging.debug(f'LOAD MODEL: {g.model_load_path}')
 
     if not g.no_train:
-        train_dataset = dataset.Dataset(g.use_same_speaker, **g.train_dataset)
-        valdt_dataset = dataset.Dataset(g.use_same_speaker, **g.valdt_dataset)
-        tests_dataset = dataset.Dataset(g.use_same_speaker, **g.tests_dataset)
+        train_dataset = dataset.MelDataset(g.use_same_speaker, **g.train_dataset)
+        valdt_dataset = dataset.MelDataset(g.use_same_speaker, **g.valdt_dataset)
+        tests_dataset = dataset.MelDataset(g.use_same_speaker, **g.tests_dataset)
 
         vgg_criterion = vgg_perceptual_loss.VGGPerceptualLoss().to(g.device)
         sim_criterion = ssim_loss.SSIMLoss(channel=1).to(g.device)

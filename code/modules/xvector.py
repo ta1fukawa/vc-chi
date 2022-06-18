@@ -26,9 +26,7 @@ class Net(torch.nn.Module):
         self.conv4  = mp.Layer(256,  2048,        layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(5, 5), padding='same')
         self.line4  = mp.Layer(2048, g.style_dim, layer='linear', bn=True, bn_first=True, activation='linear')
 
-        self.line6 = mp.Layer(g.style_dim, g.large_dataset['speaker_end'], layer='linear', bn=True, bn_first=True, activation='linear')
-
-        self.set_train_mode('small')
+        self.line6 = mp.Layer(g.style_dim, 80, layer='linear', bn=True, bn_first=True, activation='linear')
 
     def _max_pooling(self, x):
         return x.max(dim=3)[0].max(dim=2)[0]
@@ -57,6 +55,3 @@ class Net(torch.nn.Module):
         x = torch.nn.functional.log_softmax(self.line6(x), dim=-1)
 
         return x, emb
-
-    def set_train_mode(self, mode):
-        self.mode = mode

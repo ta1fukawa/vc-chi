@@ -8,7 +8,7 @@ import torch.utils.tensorboard
 
 from modules import global_value as g
 from modules import common
-from modules import dataset_xvector
+from modules import dataset
 from modules import xvector
 from modules import audio
 
@@ -22,6 +22,10 @@ def main(config_path):
     if g.model_load_path is not None:
         net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
         logging.debug(f'LOAD MODEL: {g.model_load_path}')
+
+    train_dataset = dataset.PnmDataset(**g.train_dataset)
+    valdt_dataset = dataset.PnmDataset(**g.valdt_dataset)
+    tests_dataset = dataset.PnmDataset(**g.tests_dataset)
 
     nll_criterion = torch.nn.NLLLoss()
     def criterion(pred, indices):
@@ -46,17 +50,6 @@ def main(config_path):
         for stage_no, stage in enumerate(g.stages):
             logging.info(f'STAGE: {stage}')
 
-            net.set_train_mode(stage['mode'])
-            if stage['mode'] == 'small':
-                ds = dataset_xvector.Dataset(**g.small_dataset)
-                num_repeats = g.small_dataset['num_repeats']
-            elif stage['mode'] == 'medium':
-                ds = dataset_xvector.Dataset(**g.medium_dataset)
-                num_repeats = g.medium_dataset['num_repeats']
-            elif stage['mode'] == 'large':
-                ds = dataset_xvector.Dataset(**g.large_dataset)
-                num_repeats = g.large_dataset['num_repeats']
-
             if stage['optimizer'] == 'adam':
                 optimizer = torch.optim.Adam(net.parameters(), lr=stage['lr'])
             elif stage['optimizer'] == 'sgd':
@@ -71,8 +64,8 @@ def main(config_path):
                 for epoch in range(stage['num_epochs']):
                     logging.info(f'EPOCH: {epoch + 1} (TOTAL: {total_epoch + 1})')
 
-                    train_loss = model_train   (net, ds, criterion, optimizer, num_repeats)
-                    valdt_loss = model_validate(net, ds, criterion, num_repeats)
+                    train_loss = model_train   (net, train_dataset, criterion, optimizer)
+                    valdt_loss = model_validate(net, valdt_dataset, criterion)
 
                     logging.info(f'TRAIN LOSS: {train_loss["loss"]:.10f}, VALDT LOSS: {valdt_loss["loss"]:.10f}')
                     logging.info(f'TRAIN ACC: {train_loss["acc"]:.4f}, VALDT ACC: {valdt_loss["acc"]:.4f}')
@@ -106,7 +99,7 @@ def main(config_path):
             torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_final.pth')
             torch.load(g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth', map_location=g.device)
 
-            tests_loss = model_test(net, ds, criterion, num_repeats)
+            tests_loss = model_test(net, tests_dataset, criterion)
 
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.10f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.10f}, TEST LOSS: {tests_loss["loss"]:.10f}')
             logging.info(f'BEST TRAIN ACC: {best_train_loss["acc"]:.4f}, BEST VALDT ACC: {best_valdt_loss["acc"]:.4f}, TEST ACC: {tests_loss["acc"]:.4f}')
@@ -115,7 +108,7 @@ def main(config_path):
             sw.flush()
 
 
-def model_train(net, dataset, criterion, optimizer, num_repeats):
+def model_train(net, dataset, criterion, optimizer):
     net.train()
 
     avg_losses = {}
@@ -135,12 +128,12 @@ def model_train(net, dataset, criterion, optimizer, num_repeats):
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
 
-        print(f'Training: {i + 1:03d}/{num_repeats:03d} (loss={loss.item():.10f}, acc={losses["acc"].item():.4f})\033[K\033[G', end='')
+        print(f'Training: {i + 1:03d}/{g.train_dataset["num_repeats"]:03d} (loss={loss.item():.10f}, acc={losses["acc"].item():.4f})\033[K\033[G', end='')
     
     print('\033[K\033[G', end='')
 
     for k, v in avg_losses.items():
-        avg_losses[k] /= num_repeats
+        avg_losses[k] /= g.train_dataset['num_repeats']
 
     logging.debug(f'TRAIN LOSSES: {avg_losses}')
     logging.debug(f'TRAIN ACC: {avg_losses["acc"]:.4f}')
@@ -148,7 +141,7 @@ def model_train(net, dataset, criterion, optimizer, num_repeats):
     return avg_losses
 
 
-def model_validate(net, dataset, criterion, num_repeats):
+def model_validate(net, dataset, criterion):
     net.eval()
 
     avg_losses = {}
@@ -162,25 +155,22 @@ def model_validate(net, dataset, criterion, num_repeats):
 
         loss, losses = criterion(pred, speaker_indices)
 
-        if loss.item() >= 100:
-            net(c)
-
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
 
-        print(f'Validate: {i + 1:03d}/{num_repeats:03d} (loss={loss.item():.10f}, acc={losses["acc"].item():.4f})\033[K\033[G', end='')
+        print(f'Validate: {i + 1:03d}/{g.valdt_dataset["num_repeats"]:03d} (loss={loss.item():.10f}, acc={losses["acc"].item():.4f})\033[K\033[G', end='')
 
     print('\033[K\033[G', end='')
 
     for k, v in avg_losses.items():
-        avg_losses[k] /= num_repeats
+        avg_losses[k] /= g.valdt_dataset['num_repeats']
 
     logging.debug(f'VALIDATE LOSSES: {avg_losses}')
 
     return avg_losses
 
 
-def model_test(net, dataset, criterion, num_repeats):
+def model_test(net, dataset, criterion):
     net.eval()
 
     avg_losses = {}
@@ -197,12 +187,12 @@ def model_test(net, dataset, criterion, num_repeats):
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
         
-        print(f'Testing: {i + 1:03d}/{num_repeats:03d} (loss={loss.item():.10f}, acc={losses["acc"].item():.4f})\033[K\033[G', end='')
+        print(f'Testing: {i + 1:03d}/{g.tests_dataset["num_repeats"]:03d} (loss={loss.item():.10f}, acc={losses["acc"].item():.4f})\033[K\033[G', end='')
 
     print('\033[K\033[G', end='')
 
     for k, v in avg_losses.items():
-        avg_losses[k] /= num_repeats
+        avg_losses[k] /= g.tests_dataset['num_repeats']
 
     logging.debug(f'TEST LOSSES: {avg_losses}')
     logging.debug(f'TEST ACC: {avg_losses["acc"]:.4f}')

@@ -1,48 +1,48 @@
 # Root
 use_same_speaker : true
 extract_envelope : false
-model_load_path  : 'wd/train_xvector/20220618/033433/cp/0_best_train.pth'
+model_load_path  : null
 
 # ML
 log_interval : 100
-batch_size   : 8
+batch_size   : 32
 
 stages:
   -
-    mode       : 'large'
     optimizer  : 'adam'
-    lr         : 1.e-3
-    num_epochs : 400
-    patience   : 20
-  # -
-  #   mode       : 'large'
-  #   optimizer  : 'sgd'
-  #   lr         : 1.e-2
-  #   momentum   : 0.9
-  #   num_epochs : 400
-  #   patience   : 20
+    lr         : 1.e-4
+    num_epochs : 2000
+    patience   : 100
+  -
+    optimizer  : 'sgd'
+    lr         : 1.e-2
+    momentum   : 0.9
+    num_epochs : 4000
+    patience   : 100
 
 vgg_weight  : 0.01
 ssim_weight : 0.1
 
-small_dataset:
-  num_repeats   : 100
-  speaker_start : 0
-  speaker_end   : 20
-  phoneme_start : 0
-  phoneme_end   : 5120
-medium_dataset:
-  num_repeats   : 100
-  speaker_start : 0
-  speaker_end   : 40
-  phoneme_start : 0
-  phoneme_end   : 5120
-large_dataset:
-  num_repeats   : 100
+train_dataset:
+  num_repeats   : 200
   speaker_start : 0
   speaker_end   : 80
   phoneme_start : 0
   phoneme_end   : 5120
+
+valdt_dataset:
+  num_repeats   : 100
+  speaker_start : 0
+  speaker_end   : 80
+  phoneme_start : 5120
+  phoneme_end   : 5760
+
+tests_dataset:
+  num_repeats   : 200
+  speaker_start : 0
+  speaker_end   : 80
+  phoneme_start : 5760
+  phoneme_end   : 6400
 
 # Dataset
 wav_dir : './dataset/seiren_jvs011/wav'
