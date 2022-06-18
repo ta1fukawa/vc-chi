@@ -10,31 +10,31 @@ stages:
   -
     optimizer  : 'adam'
     lr         : 1.e-3
-    num_epochs : 4000
-    patience   : 40
+    num_epochs : 2000
+    patience   : 20
   -
     optimizer  : 'sgd'
     lr         : 1.e-1
     momentum   : 0.9
-    num_epochs : 4000
-    patience   : 40
+    num_epochs : 2000
+    patience   : 20
 
 train_dataset:
-  num_repeats   : 200
+  num_repeats   : 100
   speaker_start : 0
   speaker_end   : 80
   phoneme_start : 0
   phoneme_end   : 5120
 
 valdt_dataset:
-  num_repeats   : 100
+  num_repeats   : 40
   speaker_start : 0
   speaker_end   : 80
   phoneme_start : 5120
   phoneme_end   : 5760
 
 tests_dataset:
-  num_repeats   : 200
+  num_repeats   : 40
   speaker_start : 0
   speaker_end   : 80
   phoneme_start : 5760
@@ -62,7 +62,7 @@ fft_size    : 1024
 num_mels    : 80
 fmin        : 80    # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
 fmax        : 7600  # To be increased/reduced depending on data.
-hop_size    : 120
+hop_size    : 120   # WORLD
 win_length  : 1024
 window      : 'hann'
 
