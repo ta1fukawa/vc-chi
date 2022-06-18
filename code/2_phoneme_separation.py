@@ -41,7 +41,6 @@ def main(config_path):
                 _, sp, _ = extract_acoustic_features(wave, sr)
 
                 separation_rate = 200
-                hop_length = sr // separation_rate
 
                 for start_sec, end_sec, phoneme in labels:
                     if phoneme in ['silB', 'silE', 'sp']:
