@@ -150,7 +150,7 @@ def wave2mel(wave):
         hop_length=g.hop_size,
         win_length=g.win_length,
         window=g.window,
-        pad_mode='reflect'
+        pad_mode='constant'
     )
     mel = np.dot(g._mel_basis, np.abs(spec)).T
     if g.vocoder == 'melgan':

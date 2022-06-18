@@ -20,8 +20,8 @@ from modules import global_value as g
 def main(config_path):
     common.custom_init(config_path, '%Y%m%d/%H%M%S')
 
-    wav_dir  = pathlib.Path(g.wav_dir)
-    lab_dir  = pathlib.Path(g.lab_dir)
+    wav_dir = pathlib.Path(g.wav_dir)
+    lab_dir = pathlib.Path(g.lab_dir)
 
     lab_dir.mkdir(parents=True, exist_ok=True)
     tmp_wav_dir = tempfile.TemporaryDirectory()
@@ -34,9 +34,8 @@ def main(config_path):
 
         tmp_wav_path = pathlib.Path(tmp_wav_dir.name) / f'{wav.stem}.wav'
 
-        wave, sr = librosa.load(wav, sr=None)
-        wave = librosa.resample(wave, sr, 16000)
-        sf.write(tmp_wav_path, wave, 16000, subtype='PCM_16')
+        wave, sr = librosa.load(wav, sr=16000)
+        sf.write(tmp_wav_path, wave, sr, subtype='PCM_16')
 
         with tempfile.NamedTemporaryFile('w') as f:
             f.write(kana_list[i])

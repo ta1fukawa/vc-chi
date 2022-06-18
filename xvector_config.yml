@@ -1,5 +1,6 @@
 # Root
 use_same_speaker : true
+extract_envelope : false
 model_load_path  : 'wd/train_xvector/20220618/033433/cp/0_best_train.pth'
 
 # ML
@@ -46,6 +47,7 @@ large_dataset:
 # Dataset
 wav_dir : './dataset/seiren_jvs011/wav'
 lab_dir : './dataset/seiren_jvs011/lab'
+pnm_dir : './dataset/seiren_jvs011/pnm'
 mel_dir : './dataset/seiren_jvs011/mel'
 emb_dir : './dataset/seiren_jvs011/emb'
 
