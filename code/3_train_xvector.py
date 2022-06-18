@@ -97,7 +97,10 @@ def main(config_path):
                 logging.info('SKIPPED BY USER')
 
             torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_final.pth')
-            torch.load(g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth', map_location=g.device)
+
+            if (g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth').exists():
+                torch.load(g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth', map_location=g.device)
+                logging.debug(f'LOAD BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
 
             tests_loss = model_test(net, tests_dataset, criterion)
 
@@ -146,6 +149,7 @@ def model_validate(net, dataset, criterion):
 
     avg_losses = {}
 
+    dataset.set_seed(0)
     for i, (c, (speaker_indices, _)) in enumerate(dataset):
         c = c.to(g.device)
         speaker_indices = speaker_indices.to(g.device)
@@ -175,6 +179,7 @@ def model_test(net, dataset, criterion):
 
     avg_losses = {}
 
+    dataset.set_seed(0)
     for i, (c, (speaker_indices, _)) in enumerate(dataset):
         c = c.to(g.device)
         speaker_indices = speaker_indices.to(g.device)

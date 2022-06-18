@@ -21,6 +21,8 @@ class MelDataset(torch.utils.data.Dataset):
 
             self.files.append(speeches)
 
+        self.set_seed(0)
+
     def padding(self, data, length):
         if len(data) < length:
             len_pad = length - len(data)
@@ -30,12 +32,10 @@ class MelDataset(torch.utils.data.Dataset):
         return data
 
     def __iter__(self):
-        for i in range(self.num_repeats):
-            np.random.seed(i)
-
+        for _ in range(self.num_repeats):
             if self.use_same_speaker:
-                speaker_indices = np.random.choice(len(self.files),    g.batch_size, replace=False)
-                speech_indices  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
+                speaker_indices = self.rand_state.choice(len(self.files),    g.batch_size, replace=False)
+                speech_indices  = self.rand_state.choice(len(self.files[0]), g.batch_size, replace=False)
 
                 data = torch.stack([
                     self.padding(torch.load(self.files[speaker_index][speech_index]), g.seg_len)
@@ -51,9 +51,9 @@ class MelDataset(torch.utils.data.Dataset):
                 speech_indices  = torch.from_numpy(speech_indices).long()
                 yield data, data, emb, emb, (speaker_indices, speech_indices, speaker_indices)
             else:
-                c_speaker_indices = np.random.choice(len(self.files),    g.batch_size, replace=False)
-                s_speaker_indices = np.random.choice(len(self.files),    g.batch_size, replace=False)
-                c_speech_indices  = np.random.choice(len(self.files[0]), g.batch_size, replace=False)
+                c_speaker_indices = self.rand_state.choice(len(self.files),    g.batch_size, replace=False)
+                s_speaker_indices = self.rand_state.choice(len(self.files),    g.batch_size, replace=False)
+                c_speech_indices  = self.rand_state.choice(len(self.files[0]), g.batch_size, replace=False)
 
                 c_data = torch.stack([
                     self.padding(torch.load(self.files[speaker_index][speech_index]), g.seg_len)
@@ -78,6 +78,9 @@ class MelDataset(torch.utils.data.Dataset):
                 s_speaker_indices = torch.from_numpy(s_speaker_indices).long()
                 yield c_data, t_data, c_emb, s_emb, (c_speaker_indices, c_speech_indices, s_speaker_indices)
 
+    def set_seed(self, seed):
+        self.rand_state = np.random.RandomState(seed)
+
 
 class PnmDataset(torch.utils.data.Dataset):
     def __init__(self, num_repeats, speaker_start=None, speaker_end=None, phoneme_start=None, phoneme_end=None):
@@ -92,6 +95,8 @@ class PnmDataset(torch.utils.data.Dataset):
             speaker_pnm = speaker_pnm[phoneme_start:phoneme_end]
             self.data.append(speaker_pnm)
 
+        self.set_seed(0)
+
     def padding(self, data, length):
         if len(data) < length:
             len_pad = length - len(data)
@@ -102,8 +107,8 @@ class PnmDataset(torch.utils.data.Dataset):
 
     def __iter__(self):
         for _ in range(self.num_repeats):
-            speaker_indices = np.random.choice(len(self.data),    g.batch_size, replace=False)
-            phoneme_indices = np.random.choice(len(self.data[0]), g.batch_size, replace=False)
+            speaker_indices = self.rand_state.choice(len(self.data),    g.batch_size, replace=False)
+            phoneme_indices = self.rand_state.choice(len(self.data[0]), g.batch_size, replace=False)
 
             data = torch.stack([
                 self.padding(torch.from_numpy(self.data[speaker_index][phoneme_index]), g.pnm_len)
@@ -114,5 +119,5 @@ class PnmDataset(torch.utils.data.Dataset):
             phoneme_indices = torch.from_numpy(phoneme_indices).long()
             yield data, (speaker_indices, phoneme_indices)
 
-    def sed_seed(self, seed):
-        np.random.seed(seed)
+    def set_seed(self, seed):
+        self.rand_state = np.random.RandomState(seed)

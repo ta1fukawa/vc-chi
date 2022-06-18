@@ -44,7 +44,7 @@ def backup_codes(
 
 
 def torch_reset_seed(
-    seed=0,
+    seed: int = 0,
 ):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
