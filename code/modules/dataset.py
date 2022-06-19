@@ -1,11 +1,11 @@
-import logging
-import multiprocessing
+import csv
 import pathlib
-import tempfile
 
+import librosa
 import numpy as np
 import torch
 
+from modules import audio
 from modules import global_value as g
 
 
@@ -86,63 +86,57 @@ class MelDataset(torch.utils.data.Dataset):
         return data
 
 
-class PnmDatasetStatic(torch.utils.data.Dataset):
+class PnmDataset(torch.utils.data.Dataset):
     def __init__(self, num_repeats, speaker_start=None, speaker_end=None, phoneme_start=None, phoneme_end=None):
         self.num_repeats = num_repeats
 
-        pnm_paths = sorted(pathlib.Path(g.pnm_dir).iterdir())
-        pnm_paths = pnm_paths[speaker_start:speaker_end]
+        flat_labs = []
+        for lab_path in sorted(pathlib.Path(g.lab_dir).iterdir()):
+            with lab_path.open('r') as f:
+                reader = csv.reader(f, delimiter='\t')
+                for start_sec, end_sec, phoneme in reader:
+                    if phoneme in ['silB', 'silE', 'sp']:
+                        continue
 
-        self.data = []
-        for pnm_path in pnm_paths:
-            speaker_pnm = torch.load(pnm_path)
-            speaker_pnm = speaker_pnm[phoneme_start:phoneme_end]
-            self.data.append(speaker_pnm)
+                    start_sample = int(float(start_sec) * g.sample_rate)
+                    end_sample   = int(float(end_sec)   * g.sample_rate)
 
-        self.set_seed(0)
+                    if end_sample - start_sample < 1024:
+                        continue
 
-    def __iter__(self):
-        for _ in range(self.num_repeats):
-            speaker_indices = self.rand_state.choice(len(self.data),    g.batch_size, replace=False)
-            phoneme_indices = self.rand_state.choice(len(self.data[0]), g.batch_size, replace=False)
+                    flat_labs.append((lab_path.stem, start_sample, end_sample))
+        flat_labs = flat_labs[phoneme_start:phoneme_end]
 
-            data = torch.stack([
-                self.data[speaker_index][phoneme_index]
-                for speaker_index, phoneme_index in zip(speaker_indices, phoneme_indices)
-            ], dim=0)
+        tree_labs = []
+        for lab_path in sorted(pathlib.Path(g.lab_dir).iterdir()):
+            labs = [(start_sample, end_sample) for lab_name, start_sample, end_sample in flat_labs if lab_name == lab_path.stem]
+            if len(labs) > 0:
+                tree_labs.append((lab_path.stem, labs))
 
-            speaker_indices = torch.from_numpy(speaker_indices).long()
-            phoneme_indices = torch.from_numpy(phoneme_indices).long()
-            yield data, (speaker_indices, phoneme_indices)
-
-    def set_seed(self, seed):
-        self.rand_state = np.random.RandomState(seed)
-
-
-class PnmDatasetDynamic(torch.utils.data.Dataset):
-    def __init__(self, num_repeats, speaker_start=None, speaker_end=None, phoneme_start=None, phoneme_end=None):
-        self.num_repeats = num_repeats
-
-        speakers = sorted(pathlib.Path(g.pnm_dir_dyn).iterdir())
+        speakers = sorted(pathlib.Path(g.wav_dir).iterdir())
         speakers = speakers[speaker_start:speaker_end]
-        self.speakers = speakers
 
-        self.files = []
+        self.waves = []
         for speaker in speakers:
-            speeches = sorted(speaker.iterdir())
-            speeches = speeches[phoneme_start:phoneme_end]
+            speaker_waves = []
 
-            self.files.append(speeches)
+            for lab_name, labs in tree_labs:
+                wave, sr = librosa.load(speaker / f'{lab_name}.wav', sr=g.sample_rate)
+
+                for start_sample, end_sample in labs:
+                    speaker_waves.append(wave[start_sample:end_sample])
+
+            self.waves.append(speaker_waves)
 
         self.set_seed(0)
 
     def __iter__(self):
         for _ in range(self.num_repeats):
-            speaker_indices = self.rand_state.choice(len(self.files),    g.batch_size, replace=False)
-            phoneme_indices = self.rand_state.choice(len(self.files[0]), g.batch_size, replace=False)
+            speaker_indices = self.rand_state.choice(len(self.waves),    g.batch_size, replace=False)
+            phoneme_indices = self.rand_state.choice(len(self.waves[0]), g.batch_size, replace=False)
 
             data = torch.stack([
-                self.padding(torch.load(self.files[speaker_index][phoneme_index]), g.pnm_len)
+                self.padding(torch.from_numpy(audio.wave2spec(self.waves[speaker_index][phoneme_index]).T), 32)
                 for speaker_index, phoneme_index in zip(speaker_indices, phoneme_indices)
             ], dim=0)
 

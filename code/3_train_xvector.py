@@ -22,14 +22,9 @@ def main(config_path):
         net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
         logging.debug(f'LOAD MODEL: {g.model_load_path}')
 
-    if g.dataset_dynamic:
-        train_dataset = dataset.PnmDatasetDynamic(**g.train_dataset)
-        valdt_dataset = dataset.PnmDatasetDynamic(**g.valdt_dataset)
-        tests_dataset = dataset.PnmDatasetDynamic(**g.tests_dataset)
-    else:
-        train_dataset = dataset.PnmDatasetStatic(**g.train_dataset)
-        valdt_dataset = dataset.PnmDatasetStatic(**g.valdt_dataset)
-        tests_dataset = dataset.PnmDatasetStatic(**g.tests_dataset)
+    train_dataset = dataset.PnmDataset(**g.train_dataset)
+    valdt_dataset = dataset.PnmDataset(**g.valdt_dataset)
+    tests_dataset = dataset.PnmDataset(**g.tests_dataset)
 
     nll_criterion = torch.nn.NLLLoss()
     def criterion(pred, indices):
