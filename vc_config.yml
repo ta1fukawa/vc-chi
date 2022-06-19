@@ -47,7 +47,7 @@ tests_dataset:
 
 # Dataset
 mel_dir : './dataset/seiren_jvs011/mel'
-emb_dir : './dataset/seiren_jvs011/emb_spc_all'
+emb_dir : './dataset/seiren_jvs011/emb'
 
 predict:
   source_speaker : 'jvs091'

@@ -1,9 +1,9 @@
 # Root
 extract_envelope : false
-model_load_path  : null
+model_load_path  : 'wd/3_train_xvector/20220619/192126/cp/1_best_valdt.pth'
 
 # ML
-processer_num : 32
+num_workers   : 32
 log_interval  : 100
 batch_size    : 80
 
@@ -15,7 +15,7 @@ stages:
     patience   : 20
   -
     optimizer  : 'sgd'
-    lr         : 1.e-1
+    lr         : 1.e-2
     momentum   : 0.9
     num_epochs : 2000
     patience   : 20

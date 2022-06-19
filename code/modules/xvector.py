@@ -12,16 +12,19 @@ class Net(torch.nn.Module):
         super().__init__()
 
         self.first = torch.nn.Sequential(
-            mp.Layer(1, 512, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(3, 7), padding='same'),
-            torch.nn.MaxPool2d(kernel_size=(2, 4)),
-            mp.Layer(512, 512, layer='conv2d', bn=True,  bn_first=True, activation='relu', kernel_size=(3, 5), padding='same'),
-            torch.nn.MaxPool2d(kernel_size=(2, 4)),
-            mp.Layer(512, 1024, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(3, 5), padding='same'),
-            torch.nn.MaxPool2d(kernel_size=(2, 2)),
-            mp.Layer(1024, 1024, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(3, 5), padding='same'),
-            torch.nn.MaxPool2d(kernel_size=(2, 2)),
-            mp.Layer(1024, 2048, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(3, 3), padding='same'),
-            mp.Layer(2048, 2048, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(1, 1), padding='same'),
+            mp.Layer(1, 32, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(5, 5), dilation=(1, 2), padding='same'),
+            torch.nn.MaxPool2d(kernel_size=(1, 2)),
+            mp.Layer(32, 64, layer='conv2d', bn=True,  bn_first=True, activation='relu', kernel_size=(5, 5), dilation=(1, 2), padding='same'),
+            torch.nn.MaxPool2d(kernel_size=(1, 2)),
+            mp.Layer(64, 128, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(5, 5), padding='same'),
+            torch.nn.MaxPool2d(kernel_size=(1, 2)),
+            mp.Layer(128, 256, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(5, 5), padding='same'),
+            torch.nn.MaxPool2d(kernel_size=(1, 2)),
+            mp.Layer(256, 512, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(3, 3), padding='same'),
+            torch.nn.MaxPool2d(kernel_size=(1, 2)),
+            mp.Layer(512, 1024, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(3, 3), padding='same'),
+            torch.nn.MaxPool2d(kernel_size=(1, 2)),
+            mp.Layer(1024, 2048, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(1, 1), padding='same'),
         )
 
         self.second = torch.nn.Sequential(

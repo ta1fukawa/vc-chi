@@ -161,6 +161,7 @@ def wave2spec(wave):
         window=g.window,
         pad_mode='constant'
     )
+    spec = np.abs(spec)
 
     return spec.astype(np.float32)
 
@@ -225,3 +226,20 @@ def mel2wave_melgan(mel):
     wave = wave / np.max(np.abs(wave))
 
     return wave
+
+g._stft_window = None
+def fast_stft(wave):
+    if g._stft_window is None:
+        g._stft_window = librosa.filters.get_window('hann', g.win_length, fftbins=True).reshape((-1, 1))
+        g._fft = librosa.core.fft.get_fftlib()
+        g._n_columns = 63
+
+    y_frames = librosa.util.frame(wave, frame_length=g.fft_size, hop_length=g.hop_size)
+    stft_matrix = np.empty((int(1 + g.fft_size // 2), y_frames.shape[1]), dtype=np.float32, order='F')
+
+    for bl_s in range(0, y_frames.shape[1], g._n_columns):
+        stft_matrix[:, bl_s:bl_s + g._n_columns] = np.abs(g._fft.rfft(
+            g._stft_window * y_frames[:, bl_s:bl_s + g._n_columns], axis=0
+        )).astype(np.float32)
+
+    return stft_matrix
