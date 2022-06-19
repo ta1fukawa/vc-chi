@@ -95,7 +95,7 @@ class PnmDatasetStatic(torch.utils.data.Dataset):
 
         self.data = []
         for pnm_path in pnm_paths:
-            speaker_pnm = np.load(pnm_path, allow_pickle=True)
+            speaker_pnm = torch.load(pnm_path)
             speaker_pnm = speaker_pnm[phoneme_start:phoneme_end]
             self.data.append(speaker_pnm)
 
@@ -107,7 +107,7 @@ class PnmDatasetStatic(torch.utils.data.Dataset):
             phoneme_indices = self.rand_state.choice(len(self.data[0]), g.batch_size, replace=False)
 
             data = torch.stack([
-                self.padding(torch.from_numpy(self.data[speaker_index][phoneme_index]), g.pnm_len)
+                self.data[speaker_index][phoneme_index]
                 for speaker_index, phoneme_index in zip(speaker_indices, phoneme_indices)
             ], dim=0)
 
@@ -118,31 +118,21 @@ class PnmDatasetStatic(torch.utils.data.Dataset):
     def set_seed(self, seed):
         self.rand_state = np.random.RandomState(seed)
 
-    def padding(self, data, length):
-        if len(data) < length:
-            len_pad = length - len(data)
-            data = torch.cat((data, torch.zeros(len_pad, data.shape[1])), dim=0)
-        else:
-            data = data[:length]
-        return data
-
 
 class PnmDatasetDynamic(torch.utils.data.Dataset):
     def __init__(self, num_repeats, speaker_start=None, speaker_end=None, phoneme_start=None, phoneme_end=None):
         self.num_repeats = num_repeats
-        self.phoneme_start = phoneme_start
-        self.phoneme_end = phoneme_end
 
-        org_pnm_paths = sorted(pathlib.Path(g.pnm_dir).iterdir())
-        org_pnm_paths = org_pnm_paths[speaker_start:speaker_end]
+        speakers = sorted(pathlib.Path(g.pnm_dir_dyn).iterdir())
+        speakers = speakers[speaker_start:speaker_end]
+        self.speakers = speakers
 
-        self.tmp_dir = tempfile.TemporaryDirectory()
-        self.tmp_dir_path = pathlib.Path(self.tmp_dir.name)
-        g.tmp_dirs.append(self.tmp_dir_path)
-        logging.info(f'Created temporary directory {self.tmp_dir_path}')
+        self.files = []
+        for speaker in speakers:
+            speeches = sorted(speaker.iterdir())
+            speeches = speeches[phoneme_start:phoneme_end]
 
-        pool = multiprocessing.Pool(processes=g.processer_num)
-        self.files = pool.map(self.load_pnm, org_pnm_paths)
+            self.files.append(speeches)
 
         self.set_seed(0)
 
@@ -159,21 +149,6 @@ class PnmDatasetDynamic(torch.utils.data.Dataset):
             speaker_indices = torch.from_numpy(speaker_indices).long()
             phoneme_indices = torch.from_numpy(phoneme_indices).long()
             yield data, (speaker_indices, phoneme_indices)
-
-    def __del__(self):
-        self.tmp_dir.cleanup()
-
-    def load_pnm(self, org_pnm_path):
-        speaker_pnm = np.load(org_pnm_path, allow_pickle=True)
-        speaker_pnm = speaker_pnm[self.phoneme_start:self.phoneme_end]
-
-        pnm_dir = self.tmp_dir_path / org_pnm_path.stem
-        pnm_dir.mkdir(exist_ok=True)
-
-        for i, single_pnm in enumerate(speaker_pnm):
-            torch.save(torch.from_numpy(single_pnm), pnm_dir / f'{i:06d}.pt')
-
-        return sorted(pnm_dir.iterdir())
 
     def set_seed(self, seed):
         self.rand_state = np.random.RandomState(seed)

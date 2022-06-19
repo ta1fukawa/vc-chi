@@ -42,9 +42,6 @@ def predict(net):
         speaker_mels = []
 
         for wav in sorted(speaker.iterdir()):
-            if not wav.is_file() or wav.suffix != '.wav':
-                continue
-
             print(f'Process: {speaker.name}/{wav.name}\033[K\033[G', end='')
 
             wave, mel = audio.load_wav(wav)

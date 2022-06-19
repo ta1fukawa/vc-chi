@@ -1,10 +1,10 @@
 # Root
 extract_envelope : false
 model_load_path  : null
-dataset_dynamic  : true
+dataset_dynamic  : false
 
 # ML
-processer_num : 1
+processer_num : 32
 log_interval  : 100
 batch_size    : 80
 
@@ -45,10 +45,11 @@ tests_dataset:
 # Dataset
 wav_dir : './dataset/seiren_jvs011/wav'
 lab_dir : './dataset/seiren_jvs011/lab'
-pnm_mel_dir : './dataset/seiren_jvs011/pnm_mel_all'  # Save directory for mel-spectrogram
-pnm_spc_dir : './dataset/seiren_jvs011/pnm_spc_all'  # Save directory for spectrogram
-pnm_dir : './dataset/seiren_jvs011/pnm_spc_all'      # Load target directory
-emb_dir : './dataset/seiren_jvs011/emb_spc_all'
+pnm_mel_dir : './dataset/seiren_jvs011/pnm_mel'  # Save directory for mel-spectrogram
+pnm_spc_dir : './dataset/seiren_jvs011/pnm_spc'  # Save directory for spectrogram
+pnm_dir : './dataset/seiren_jvs011/pnm_spc'      # Load target directory (static)
+pnm_dir_dyn : '/tmp/pnm_spc'                     # Load target directory (dynamic)
+emb_dir : './dataset/seiren_jvs011/emb_spc'
 mel_dir : './dataset/seiren_jvs011/mel'
 
 kana_path : './dataset/jvs_hiho/voiceactoress100_spaced_julius.txt'
@@ -64,7 +65,7 @@ fft_size    : 1024
 num_mels    : 80
 fmin        : 80    # Set this to 55 if your speaker is male! if female, 95 should help taking off noise.
 fmax        : 7600  # To be increased/reduced depending on data.
-hop_size    : 120   # WORLD
+hop_size    : 120
 win_length  : 1024
 window      : 'hann'
 

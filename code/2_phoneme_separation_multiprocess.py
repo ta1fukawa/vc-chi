@@ -1,13 +1,14 @@
 import argparse
 import csv
 import logging
+import multiprocessing
 import pathlib
 import traceback
-import multiprocessing
 
 import librosa
 import numpy as np
 import pyworld
+import torch
 
 from modules import audio, common
 from modules import global_value as g
@@ -27,6 +28,8 @@ def main(config_path):
     pool = multiprocessing.Pool(processes=g.processer_num)
     pool.map(process, sorted(wav_dir.iterdir()))
 
+    print('\033[K\033[G', end='')
+
 
 def process(speaker):
     wav_dir = pathlib.Path(g.wav_dir)
@@ -37,11 +40,8 @@ def process(speaker):
     speaker_pnm_spc = []
     speaker_pnm_mel = []
 
-    logging.info(f'Process: {speaker.name}')
-
     for wav in sorted(speaker.iterdir()):
-        if not wav.is_file() or wav.suffix != '.wav':
-            continue
+        print(f'Process: {speaker.name}/{wav.name}\033[K\033[G', end='')
 
         wave, sr = librosa.load(wav, sr=g.sample_rate, dtype=np.float64, mono=True)
 
@@ -66,8 +66,8 @@ def process(speaker):
                 spc = sp[start_frame:end_frame].T
                 mel = audio.spec2mel(spc)
 
-                speaker_pnm_spc.append(spc.T)
-                speaker_pnm_mel.append(mel)
+                speaker_pnm_spc.append(padding(spc.T, 32))
+                speaker_pnm_mel.append(padding(mel, 32))
         else:
             for start_sec, end_sec, phoneme in labels:
                 if phoneme in ['silB', 'silE', 'sp']:
@@ -79,11 +79,14 @@ def process(speaker):
                 spc = audio.wave2spec(wave[start_sample:end_sample])
                 mel = audio.spec2mel(spc)
 
-                speaker_pnm_spc.append(spc.T)
-                speaker_pnm_mel.append(mel)
+                speaker_pnm_spc.append(padding(spc.T, 32))
+                speaker_pnm_mel.append(padding(mel, 32))
 
-    np.save(pnm_spc_dir / f'{speaker.name}.npy', speaker_pnm_spc, allow_pickle=True)
-    np.save(pnm_mel_dir / f'{speaker.name}.npy', speaker_pnm_mel, allow_pickle=True)
+    speaker_pnm_spc = torch.from_numpy(np.array(speaker_pnm_spc))
+    speaker_pnm_mel = torch.from_numpy(np.array(speaker_pnm_mel))
+
+    torch.save(speaker_pnm_spc, pnm_spc_dir / f'{speaker.name}.pt')
+    torch.save(speaker_pnm_mel, pnm_mel_dir / f'{speaker.name}.pt')
 
 
 def extract_acoustic_features(wave, sr, mode='dio'):
@@ -96,6 +99,14 @@ def extract_acoustic_features(wave, sr, mode='dio'):
     ap = pyworld.d4c(wave, f0, t, sr) # 非周期性指標の抽出 aperiodicity (n, f)
 
     return f0, sp, ap
+
+def padding(data, length):
+    if len(data) < length:
+        len_pad = length - len(data)
+        data = np.concatenate((data, np.zeros((len_pad, data.shape[1]))), axis=0)
+    else:
+        data = data[:length]
+    return data
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
