@@ -1,6 +1,6 @@
 # Root
 extract_envelope : false
-model_load_path  : 'wd/3_train_xvector/20220620/171638/cp/0_best_valdt.pth'
+model_load_path  : null
 
 # ML
 num_workers   : 32
@@ -19,21 +19,21 @@ train_dataset:
   speaker_start : 0
   speaker_end   : 16
   phoneme_start : 0
-  phoneme_end   : 3600
+  phoneme_end   : 3000
 
 valdt_dataset:
   num_repeats   : 40
   speaker_start : 0
   speaker_end   : 16
-  phoneme_start : 3600
-  phoneme_end   : 4000
+  phoneme_start : 3000
+  phoneme_end   : 3400
 
 tests_dataset:
   num_repeats   : 40
   speaker_start : 0
   speaker_end   : 16
-  phoneme_start : 4000
-  phoneme_end   : 4400
+  phoneme_start : 3400
+  phoneme_end   : 3800
 
 # Dataset
 wav_dir : './dataset/jvs_ver1/wav'

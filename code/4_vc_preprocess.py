@@ -1,3 +1,5 @@
+# Run only once
+
 import argparse
 import logging
 import pathlib

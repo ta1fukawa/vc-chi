@@ -1,7 +1,6 @@
 import argparse
 import logging
 import pathlib
-import shutil
 import traceback
 
 import torch
@@ -22,9 +21,9 @@ def main(config_path):
         net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
         logging.debug(f'LOAD MODEL: {g.model_load_path}')
 
-    train_dataset = dataset.PnmDataset(**g.train_dataset)
-    valdt_dataset = dataset.PnmDataset(**g.valdt_dataset)
-    tests_dataset = dataset.PnmDataset(**g.tests_dataset)
+    train_dataset = dataset.PnmDataset_JVS(**g.train_dataset)
+    valdt_dataset = dataset.PnmDataset_JVS(**g.valdt_dataset)
+    tests_dataset = dataset.PnmDataset_JVS(**g.tests_dataset)
 
     nll_criterion = torch.nn.NLLLoss()
     def criterion(pred, indices):

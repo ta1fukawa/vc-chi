@@ -1,3 +1,5 @@
+# Run only once
+
 import pathlib
 import shutil
 
