@@ -1,11 +1,11 @@
 # Root
 extract_envelope : false
-model_load_path  : 'wd/3_train_xvector/20220619/192126/cp/1_best_valdt.pth'
+model_load_path  : 'wd/3_train_xvector/20220620/171638/cp/0_best_valdt.pth'
 
 # ML
 num_workers   : 32
 log_interval  : 100
-batch_size    : 80
+batch_size    : 16
 
 stages:
   -
@@ -13,31 +13,25 @@ stages:
     lr         : 1.e-3
     num_epochs : 2000
     patience   : 20
-  -
-    optimizer  : 'sgd'
-    lr         : 1.e-2
-    momentum   : 0.9
-    num_epochs : 2000
-    patience   : 20
 
 train_dataset:
   num_repeats   : 100
   speaker_start : 0
-  speaker_end   : 80
+  speaker_end   : 16
   phoneme_start : 0
   phoneme_end   : 3600
 
 valdt_dataset:
   num_repeats   : 40
   speaker_start : 0
-  speaker_end   : 80
+  speaker_end   : 16
   phoneme_start : 3600
   phoneme_end   : 4000
 
 tests_dataset:
   num_repeats   : 40
   speaker_start : 0
-  speaker_end   : 80
+  speaker_end   : 16
   phoneme_start : 4000
   phoneme_end   : 4400
 
@@ -66,6 +60,6 @@ window      : 'hann'
 
 # Model (xvector)
 seg_len     : 128
-style_dim   : 128
+style_dim   : 512
 
 pnm_len : 32

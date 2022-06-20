@@ -1,7 +1,6 @@
 import argparse
 import logging
 import pathlib
-import shutil
 import traceback
 
 import torch
@@ -10,8 +9,6 @@ import torch.utils.tensorboard
 from modules import audio, common, dataset
 from modules import global_value as g
 from modules import model, ssim_loss, vgg_perceptual_loss
-
-import matplotlib; matplotlib.use('Agg')
 
 
 def main(config_path):
@@ -252,9 +249,6 @@ if __name__ == '__main__':
         logging.error(traceback.format_exc())
         raise e
     finally:
-        for tmp_dir in g.tmp_dirs:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-
         logging.info('Done')
         logging.shutdown()
 

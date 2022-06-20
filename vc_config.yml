@@ -86,7 +86,7 @@ waveglow:
 
 # Model (xvector)
 seg_len     : 128
-style_dim   : 128
+style_dim   : 512
 
 # Model (vc)
 dim_neck    : 32

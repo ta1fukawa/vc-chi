@@ -12,30 +12,44 @@ class Net(torch.nn.Module):
         super().__init__()
 
         self.first = torch.nn.Sequential(
-            mp.Layer(1, 32, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(5, 5), dilation=(1, 2), padding='same'),
-            torch.nn.MaxPool2d(kernel_size=(1, 2)),
-            mp.Layer(32, 64, layer='conv2d', bn=True,  bn_first=True, activation='relu', kernel_size=(5, 5), dilation=(1, 2), padding='same'),
-            torch.nn.MaxPool2d(kernel_size=(1, 2)),
-            mp.Layer(64, 128, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(5, 5), padding='same'),
-            torch.nn.MaxPool2d(kernel_size=(1, 2)),
-            mp.Layer(128, 256, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(5, 5), padding='same'),
-            torch.nn.MaxPool2d(kernel_size=(1, 2)),
-            mp.Layer(256, 512, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(3, 3), padding='same'),
-            torch.nn.MaxPool2d(kernel_size=(1, 2)),
-            mp.Layer(512, 1024, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(3, 3), padding='same'),
-            torch.nn.MaxPool2d(kernel_size=(1, 2)),
-            mp.Layer(1024, 2048, layer='conv2d', bn=True, bn_first=True, activation='relu', kernel_size=(1, 1), padding='same'),
+            torch.nn.Conv2d(1,  64, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
+            torch.nn.ReLU(),
+            torch.nn.Conv2d(64, 64, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
+            torch.nn.ReLU(),
+            torch.nn.Dropout2d(p=0.2),
+            torch.nn.MaxPool2d(kernel_size=(1, 4)),
+        
+            torch.nn.Conv2d(64,  128, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
+            torch.nn.ReLU(),
+            torch.nn.Conv2d(128, 128, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
+            torch.nn.ReLU(),
+            torch.nn.Dropout2d(p=0.2),
+            torch.nn.MaxPool2d(kernel_size=(1, 4)),
+        
+            torch.nn.Conv2d(128, 256, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
+            torch.nn.ReLU(),
+            torch.nn.Conv2d(256, 256, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
+            torch.nn.ReLU(),
+            torch.nn.Dropout2d(p=0.2),
+            torch.nn.MaxPool2d(kernel_size=(1, 4)),
+        
+            torch.nn.Conv2d(256, 2048, kernel_size=(5, 5), dilation=(1, 1), padding='same')
         )
 
         self.second = torch.nn.Sequential(
-            mp.Layer(2048, 1024, layer='linear', bn=True, bn_first=True, activation='linear'),
-            mp.Layer(1024, g.style_dim, layer='linear', bn=True, bn_first=True, activation='linear'),
+            torch.nn.Linear(2048, g.style_dim),
         )
 
         self.last = torch.nn.Sequential(
             torch.nn.ReLU(),
-            mp.Layer(g.style_dim, 80, layer='linear', bn=True, bn_first=True, activation='linear'),
-            torch.nn.LogSoftmax(dim=-1),
+            torch.nn.Dropout(p=0.2),
+            
+            torch.nn.Linear(g.style_dim, 1024),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(p=0.2),
+            
+            torch.nn.Linear(1024, 16),
+            torch.nn.LogSoftmax(dim=-1)
         )
 
     def _max_pooling(self, x):
