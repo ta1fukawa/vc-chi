@@ -27,17 +27,13 @@ def predict(net):
     net.eval()
 
     wav_dir = pathlib.Path(g.wav_dir)
-    mel_dir = pathlib.Path(g.mel_dir)
     emb_dir = pathlib.Path(g.emb_dir)
 
-    mel_dir.mkdir(parents=True, exist_ok=True)
     emb_dir.mkdir(parents=True, exist_ok=True)
 
     for speaker in sorted(wav_dir.iterdir()):
         if not speaker.is_dir():
             continue
-
-        (mel_dir / speaker.name).mkdir(parents=True, exist_ok=True)
 
         speaker_mels = []
 
@@ -45,7 +41,6 @@ def predict(net):
             print(f'Process: {speaker.name}/{wav.name}\033[K\033[G', end='')
 
             wave, mel = audio.load_wav(wav)
-            audio.save_mel_data(mel, mel_dir / speaker.name / f'{wav.stem}.pt')
 
             speaker_mels.append(padding(torch.from_numpy(mel)))
 

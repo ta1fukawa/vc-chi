@@ -36,10 +36,9 @@ tests_dataset:
   phoneme_end   : 4400
 
 # Dataset
-wav_dir : './dataset/seiren_jvs011/wav'
-lab_dir : './dataset/seiren_jvs011/lab'
-emb_dir : './dataset/seiren_jvs011/emb'
-mel_dir : './dataset/seiren_jvs011/mel'
+wav_dir : './dataset/jvs_ver1/wav'
+lab_dir : './dataset/jvs_ver1/lab'
+emb_dir : './dataset/jvs_ver1/emb'
 
 kana_path : './dataset/jvs_hiho/voiceactoress100_spaced_julius.txt'
 hmm_path  : './dataset/dictation-kit-4.5/model/phone_m/jnas-mono-16mix-gid.binhmm'

@@ -48,7 +48,7 @@ tests_dataset:
 # Dataset
 wav_dir : './dataset/seiren_jvs011/wav'
 mel_dir : './dataset/seiren_jvs011/mel'
-emb_dir : './dataset/seiren_jvs011/emb'
+emb_dir : './archive/emb_old_01'
 
 predict:
   source_speaker : 'jvs091'
@@ -87,7 +87,7 @@ waveglow:
 
 # Model (xvector)
 seg_len     : 128
-style_dim   : 512
+style_dim   : 256
 
 # Model (vc)
 dim_neck    : 32
