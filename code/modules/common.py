@@ -31,7 +31,7 @@ def init_logger(
 def backup_codes(
     src_dir: pathlib.Path,
     dst_dir: pathlib.Path,
-    ext_list: list = ['.py', '.sh', '.yaml', '.json'],
+    ext_list: list = ['.py', '.sh', '.yml', '.yaml', '.json'],
 ):
     dst_dir.mkdir(parents=True)
     for src_path in src_dir.glob('**/*'):
@@ -65,9 +65,10 @@ def custom_init(
     logging.info(f'CODE/RUN: {g.code_id}/{g.run_id}')
 
     backup_codes(pathlib.Path(__file__).parent, g.work_dir / 'code')
+    shutil.copy(config_path, g.work_dir / 'config.yml')
 
     config = yaml.load(config_path.open(mode='r'), Loader=yaml.FullLoader)
-    logging.debug(f'CONFIG: {config}')
+    logging.info(f'CONFIG: {config}')
 
     for k, v in config.items():
         setattr(g, k, v)

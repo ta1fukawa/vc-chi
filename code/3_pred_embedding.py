@@ -26,7 +26,7 @@ def main(config_path):
 def predict(net):
     net.eval()
 
-    wav_dir = pathlib.Path(g.wav_dir)
+    wav_dir = pathlib.Path(g.bak_dir)
     emb_dir = pathlib.Path(g.emb_dir)
 
     emb_dir.mkdir(parents=True, exist_ok=True)
