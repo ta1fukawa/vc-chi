@@ -3,9 +3,9 @@ extract_envelope : false
 model_load_path  : null
 
 # ML
-num_workers   : 32
 log_interval  : 100
-batch_size    : 16
+batch_size    : 32
+speaker_size  : 16
 
 stages:
   -
@@ -16,24 +16,18 @@ stages:
 
 train_dataset:
   num_repeats   : 100
-  speaker_start : 0
-  speaker_end   : 16
   phoneme_start : 0
   phoneme_end   : 3000
 
 valdt_dataset:
   num_repeats   : 40
-  speaker_start : 0
-  speaker_end   : 16
   phoneme_start : 3000
-  phoneme_end   : 3400
+  phoneme_end   : 3200
 
 tests_dataset:
   num_repeats   : 40
-  speaker_start : 0
-  speaker_end   : 16
-  phoneme_start : 3400
-  phoneme_end   : 3800
+  phoneme_start : 3200
+  phoneme_end   : 3400
 
 # Dataset
 wav_dir : './dataset/jvs_ver1/wav'
@@ -59,6 +53,6 @@ window      : 'hann'
 
 # Model (xvector)
 seg_len     : 128
-style_dim   : 512
+style_dim   : 256
 
 pnm_len : 32
