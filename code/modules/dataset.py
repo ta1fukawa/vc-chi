@@ -201,7 +201,7 @@ class PnmDataset_JVS(torch.utils.data.Dataset):
                     start_sample = int(float(start_sec) * g.sample_rate)
                     end_sample   = int(float(end_sec)   * g.sample_rate)
 
-                    if end_sample - start_sample < g.fft_size:
+                    if (end_sample - start_sample - g.fft_size) / g.hop_size + 1 < 16:
                         continue
 
                     flat_labs.append((lab_path.stem, start_sample, end_sample))

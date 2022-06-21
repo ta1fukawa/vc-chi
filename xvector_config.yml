@@ -11,23 +11,23 @@ stages:
   -
     optimizer  : 'adam'
     lr         : 1.e-3
-    num_epochs : 2000
-    patience   : 20
+    num_epochs : 5000
+    patience   : 100
 
 train_dataset:
   num_repeats   : 100
   phoneme_start : 0
-  phoneme_end   : 3000
+  phoneme_end   : 480
 
 valdt_dataset:
   num_repeats   : 40
-  phoneme_start : 3000
-  phoneme_end   : 3200
+  phoneme_start : 480
+  phoneme_end   : 500
 
 tests_dataset:
   num_repeats   : 40
-  phoneme_start : 3200
-  phoneme_end   : 3400
+  phoneme_start : 500
+  phoneme_end   : 520 # max: 539
 
 # Dataset
 wav_dir : './dataset/jvs_ver1/wav'
@@ -54,5 +54,6 @@ window      : 'hann'
 # Model (xvector)
 seg_len     : 128
 style_dim   : 256
+
 
 pnm_len : 32
