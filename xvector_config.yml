@@ -5,7 +5,7 @@ model_load_path  : null
 # ML
 log_interval  : 100
 batch_size    : 32
-speaker_size  : 16
+speaker_size  : 8
 
 stages:
   -
@@ -33,7 +33,7 @@ tests_dataset:
 wav_dir : './dataset/jvs_ver1/wav'
 bak_dir : './dataset/jvs_ver1/wav_bak'
 lab_dir : './dataset/jvs_ver1/lab'
-emb_dir : './dataset/jvs_ver1/emb_spk16_dim64'
+emb_dir : './dataset/jvs_ver1/emb_spk8_dim32'
 
 kana_path : './dataset/jvs_hiho/voiceactoress100_spaced_julius.txt'
 hmm_path  : './dataset/dictation-kit-4.5/model/phone_m/jnas-mono-16mix-gid.binhmm'
@@ -54,7 +54,6 @@ window      : 'hann'
 
 # Model (xvector)
 seg_len     : 128
-style_dim   : 64
-
+style_dim   : 32
 
 pnm_len : 32

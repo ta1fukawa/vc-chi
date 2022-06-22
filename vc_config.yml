@@ -1,12 +1,13 @@
 # Root
 use_same_speaker : true
-no_train         : false
 model_load_path  : null
+xvec_model_path  : 'wd/2_train_xvector/20220622/142211/cp/0_best_valdt.pth'
 need_predict     : true
 
 # ML
 log_interval : 100
 batch_size   : 8
+speaker_size : 32
 
 stages:
   -
@@ -48,7 +49,7 @@ tests_dataset:
 # Dataset
 wav_dir : './dataset/seiren_jvs011/wav'
 mel_dir : './dataset/seiren_jvs011/mel'
-emb_dir : './dataset/jvs_ver1/emb_spk32_dim128'
+emb_dir : './dataset/jvs_ver1/emb_spk32_dim256'
 
 predict:
   source_speaker : 'jvs091'
@@ -87,7 +88,7 @@ waveglow:
 
 # Model (xvector)
 seg_len     : 128
-style_dim   : 128
+style_dim   : 256
 
 # Model (vc)
 dim_neck    : 32
