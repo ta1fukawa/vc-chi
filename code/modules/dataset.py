@@ -43,6 +43,7 @@ class MelDataset(torch.utils.data.Dataset):
                     torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_index].name}.pt')
                     for speaker_index in speaker_indices
                 ], dim=0)
+                # emb = torch.zeros_like(emb)
 
                 speaker_indices = torch.from_numpy(speaker_indices).long()
                 speech_indices  = torch.from_numpy(speech_indices).long()
@@ -69,6 +70,8 @@ class MelDataset(torch.utils.data.Dataset):
                     torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_index].name}.pt')
                     for speaker_index in s_speaker_indices
                 ], dim=0)
+                # c_emb = torch.zeros_like(c_emb)
+                # s_emb = torch.zeros_like(s_emb)
 
                 c_speaker_indices = torch.from_numpy(c_speaker_indices).long()
                 c_speech_indices  = torch.from_numpy(c_speech_indices).long()
@@ -159,14 +162,14 @@ class PnmDataset_Seiren(torch.utils.data.Dataset):
 
 
 class PnmDataset_JVS(torch.utils.data.Dataset):
-    def __init__(self, num_repeats, phoneme_start=None, phoneme_end=None):
+    def __init__(self, speaker_size, num_repeats, phoneme_start=None, phoneme_end=None):
         self.num_repeats = num_repeats
 
         self.phoneme_start = phoneme_start
         self.phoneme_end   = phoneme_end
 
         speakers = sorted(pathlib.Path(g.wav_dir).iterdir())
-        speakers = speakers[:g.speaker_size]
+        speakers = speakers[:speaker_size]
 
         pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
         self.waves = pool.map(self.load_wav, speakers)

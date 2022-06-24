@@ -11,8 +11,8 @@ from modules import global_value as g
 from modules import xvector
 
 
-def main(config_path):
-    common.custom_init(config_path, '%Y%m%d/%H%M%S')
+def main(config_path, note):
+    common.custom_init(config_path, '%Y%m%d/%H%M%S', note)
 
     net = xvector.Net().to(g.device)
     logging.debug(f'MODEL: {net}')
@@ -20,10 +20,6 @@ def main(config_path):
     if g.model_load_path is not None:
         net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
         logging.debug(f'LOAD MODEL: {g.model_load_path}')
-
-    train_dataset = dataset.PnmDataset_JVS(**g.train_dataset)
-    valdt_dataset = dataset.PnmDataset_JVS(**g.valdt_dataset)
-    tests_dataset = dataset.PnmDataset_JVS(**g.tests_dataset)
 
     nll_criterion = torch.nn.NLLLoss()
     def criterion(pred, indices):
@@ -48,11 +44,23 @@ def main(config_path):
         for stage_no, stage in enumerate(g.stages):
             logging.info(f'STAGE: {stage}')
 
+            net.set_cassifier(stage['speaker_size'])
+            logging.debug(f'MODEL: {net}')
+
+            if stage['only_classifier']:
+                parameters = net.classifier.parameters()
+            else:
+                parameters = net.parameters()
+
             if stage['optimizer'] == 'adam':
-                optimizer = torch.optim.Adam(net.parameters(), lr=stage['lr'])
+                optimizer = torch.optim.Adam(parameters, lr=stage['lr'])
             elif stage['optimizer'] == 'sgd':
-                optimizer = torch.optim.SGD(net.parameters(), lr=stage['lr'], momentum=stage['momentum'])
+                optimizer = torch.optim.SGD(parameters, lr=stage['lr'], momentum=stage['momentum'])
             logging.debug(f'SET OPTIMIZER: {optimizer}')
+
+            train_dataset = dataset.PnmDataset_JVS(stage['speaker_size'], **g.train_dataset)
+            valdt_dataset = dataset.PnmDataset_JVS(stage['speaker_size'], **g.valdt_dataset)
+            tests_dataset = dataset.PnmDataset_JVS(stage['speaker_size'], **g.tests_dataset)
 
             try:
                 patience = 0
@@ -104,6 +112,8 @@ def main(config_path):
 
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.10f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.10f}, TEST LOSS: {tests_loss["loss"]:.10f}')
             logging.info(f'BEST TRAIN ACC: {best_train_loss["acc"]:.4f}, BEST VALDT ACC: {best_valdt_loss["acc"]:.4f}, TEST ACC: {tests_loss["acc"]:.4f}')
+    
+    common.update_note_status('done')
 
 
 def model_train(net, dataset, criterion, optimizer):
@@ -202,12 +212,14 @@ def model_test(net, dataset, criterion):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_path', type=pathlib.Path, default='xvector_config.yml')
+    parser.add_argument('-c', '--config_path', type=pathlib.Path, default='xvector_config.yml')
+    parser.add_argument('-n', '--note', type=str, default='')
 
     try:
         main(**vars(parser.parse_args()))
     except Exception as e:
         logging.error(traceback.format_exc())
+        common.update_note_status('error')
         raise e
     finally:
         logging.info('Done')

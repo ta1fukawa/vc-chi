@@ -1,5 +1,6 @@
 # https://github.com/KrishnaDN/x-vector-pytorch
 
+import logging
 import torch
 import torch.nn.functional
 
@@ -11,7 +12,7 @@ class Net(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.first = torch.nn.Sequential(
+        self.conv = torch.nn.Sequential(
             torch.nn.Conv2d(1,  64, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
             torch.nn.ReLU(),
             torch.nn.Conv2d(64, 64, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
@@ -36,21 +37,30 @@ class Net(torch.nn.Module):
             torch.nn.Conv2d(256, 2048, kernel_size=(5, 5), dilation=(1, 1), padding='same')
         )
 
-        self.second = torch.nn.Sequential(
+        self.compress = torch.nn.Sequential(
             torch.nn.Linear(2048, g.style_dim),
         )
 
-        self.last = torch.nn.Sequential(
+        self.cushion = torch.nn.Sequential(
             torch.nn.ReLU(),
             torch.nn.Dropout(p=0.2),
 
             torch.nn.Linear(g.style_dim, 1024),
             torch.nn.ReLU(),
             torch.nn.Dropout(p=0.2),
-
-            torch.nn.Linear(1024, g.speaker_size),
-            torch.nn.LogSoftmax(dim=-1)
         )
+
+        self.classifier = torch.nn.Sequential(
+            torch.nn.Linear(1024, g.speaker_size),
+            torch.nn.LogSoftmax(dim=-1),
+        )
+
+    def set_cassifier(self, speaker_size):
+        if speaker_size == self.classifier[0].out_features:
+            return
+
+        self.classifier[0] = torch.nn.Linear(self.classifier[0].in_features, speaker_size).to(g.device)
+        logging.info('Set classifier size to {}'.format(speaker_size))
 
     def _max_pooling(self, x):
         return x.max(dim=3)[0].max(dim=2)[0]
@@ -58,9 +68,10 @@ class Net(torch.nn.Module):
     def forward(self, x):
         x = torch.unsqueeze(x, 1)
 
-        x = self.first(x)
+        x = self.conv(x)
         x = self._max_pooling(x)
-        emb = self.second(x)
-        x = self.last(emb)
+        emb = self.compress(x)
+        x = self.cushion(emb)
+        x = self.classifier(x)
 
         return x, emb
