@@ -43,6 +43,7 @@ def main(config_path, note):
 
         for stage_no, stage in enumerate(g.stages):
             logging.info(f'STAGE: {stage}')
+            common.update_note_status(f'stage_{stage_no}')
 
             net.set_cassifier(stage['speaker_size'])
             logging.debug(f'MODEL: {net}')
@@ -62,45 +63,42 @@ def main(config_path, note):
             valdt_dataset = dataset.PnmDataset_JVS(stage['speaker_size'], **g.valdt_dataset)
             tests_dataset = dataset.PnmDataset_JVS(stage['speaker_size'], **g.tests_dataset)
 
-            try:
-                patience = 0
+            patience = 0
 
-                best_train_loss = best_valdt_loss = {'loss': float('inf')}
+            best_train_loss = best_valdt_loss = {'loss': float('inf')}
 
-                for epoch in range(stage['num_epochs']):
-                    logging.info(f'EPOCH: {epoch + 1} (TOTAL: {total_epoch + 1})')
+            for epoch in range(stage['num_epochs']):
+                logging.info(f'EPOCH: {epoch + 1} (TOTAL: {total_epoch + 1})')
 
-                    train_loss = model_train   (net, train_dataset, criterion, optimizer)
-                    valdt_loss = model_validate(net, valdt_dataset, criterion)
+                train_loss = model_train   (net, train_dataset, criterion, optimizer)
+                valdt_loss = model_validate(net, valdt_dataset, criterion)
 
-                    logging.info(f'TRAIN LOSS: {train_loss["loss"]:.10f}, VALDT LOSS: {valdt_loss["loss"]:.10f}')
-                    logging.info(f'TRAIN ACC: {train_loss["acc"]:.4f}, VALDT ACC: {valdt_loss["acc"]:.4f}')
+                logging.info(f'TRAIN LOSS: {train_loss["loss"]:.10f}, VALDT LOSS: {valdt_loss["loss"]:.10f}')
+                logging.info(f'TRAIN ACC: {train_loss["acc"]:.4f}, VALDT ACC: {valdt_loss["acc"]:.4f}')
 
-                    if train_loss['loss'] < best_train_loss['loss']:
-                        best_train_loss = train_loss
-                        torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_best_train.pth')
-                        logging.debug(f'SAVE BEST TRAIN MODEL: {g.work_dir / "cp" / "best_train.pth"}')
+                if train_loss['loss'] < best_train_loss['loss']:
+                    best_train_loss = train_loss
+                    torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_best_train.pth')
+                    logging.debug(f'SAVE BEST TRAIN MODEL: {g.work_dir / "cp" / "best_train.pth"}')
 
-                    if valdt_loss['loss'] < best_valdt_loss['loss']:
-                        best_valdt_loss = valdt_loss
-                        torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth')
-                        logging.debug(f'SAVE BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
+                if valdt_loss['loss'] < best_valdt_loss['loss']:
+                    best_valdt_loss = valdt_loss
+                    torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth')
+                    logging.debug(f'SAVE BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
 
-                        patience = 0
-                    else:
-                        patience += 1
+                    patience = 0
+                else:
+                    patience += 1
 
-                    if patience >= stage['patience']:
-                        logging.info(f'EARLY STOPPING: {patience}')
-                        break
+                if patience >= stage['patience']:
+                    logging.info(f'EARLY STOPPING: {patience}')
+                    break
 
-                    for key in train_loss.keys():
-                        sw.add_scalars(key, {'train': train_loss[key], 'valdt': valdt_loss[key]}, total_epoch)
-                    sw.flush()
+                for key in train_loss.keys():
+                    sw.add_scalars(key, {'train': train_loss[key], 'valdt': valdt_loss[key]}, total_epoch)
+                sw.flush()
 
-                    total_epoch += 1
-            except KeyboardInterrupt:
-                logging.info('SKIPPED BY USER')
+                total_epoch += 1
 
             torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_final.pth')
 
@@ -112,8 +110,6 @@ def main(config_path, note):
 
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.10f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.10f}, TEST LOSS: {tests_loss["loss"]:.10f}')
             logging.info(f'BEST TRAIN ACC: {best_train_loss["acc"]:.4f}, BEST VALDT ACC: {best_valdt_loss["acc"]:.4f}, TEST ACC: {tests_loss["acc"]:.4f}')
-    
-    common.update_note_status('done')
 
 
 def model_train(net, dataset, criterion, optimizer):
@@ -213,10 +209,11 @@ def model_test(net, dataset, criterion):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config_path', type=pathlib.Path, default='xvector_config.yml')
-    parser.add_argument('-n', '--note', type=str, default='')
+    parser.add_argument('-n', '--note', type=str, default=None)
 
     try:
         main(**vars(parser.parse_args()))
+        common.update_note_status('done')
     except Exception as e:
         logging.error(traceback.format_exc())
         common.update_note_status('error')

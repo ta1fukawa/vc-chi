@@ -56,7 +56,7 @@ def torch_reset_seed(
 def custom_init(
     config_path: pathlib.Path,
     run_id_format: str,
-    note: str = '',
+    note: str = None,
 ):
     g.code_id = os.path.splitext(os.path.basename(inspect.stack()[1].filename))[0]
     g.run_id  = datetime.datetime.now().strftime(run_id_format)
@@ -84,34 +84,35 @@ def custom_init(
     else:
         g.device = torch.device('cpu')
 
-    update_note_status('running', note)
+    update_note_status('init', note)
 
     torch_reset_seed(0)
 
-g._note = ''
+g._note = None
 def update_note_status(
     status: str,
-    note: str = '',
+    note: str = None,
 ):
-    if note:
+    if note is not None:
         g._note = note
 
-    note_path = pathlib.Path('logs', f'{g.code_id}.csv')
-    if not note_path.exists():
-        with note_path.open(mode='w') as f:
-            writer = csv.writer(f)
-            writer.writerow(['code_id', 'run_id', 'note', 'status'])
+    if g._note is not None:
+        note_path = pathlib.Path('logs', f'{g.code_id}.csv')
+        if not note_path.exists():
+            with note_path.open(mode='w') as f:
+                writer = csv.writer(f)
+                writer.writerow(['code_id', 'run_id', 'note', 'status'])
 
-    with note_path.open(mode='r+') as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
-        rows = list(csv.reader(f))
-        for i, row in enumerate(rows):
-            if row[1] == g.run_id:
-                rows[i] = [g.code_id, g.run_id, g._note, status]
-                break
-        else:
-            rows.append([g.code_id, g.run_id, g._note, status])
-        f.seek(0)
-        writer = csv.writer(f)
-        writer.writerows(rows)
-        fcntl.flock(f, fcntl.LOCK_UN)
+        with note_path.open(mode='r+') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            rows = list(csv.reader(f))
+            for i, row in enumerate(rows):
+                if row[1] == g.run_id:
+                    rows[i] = [g.code_id, g.run_id, g._note, status]
+                    break
+            else:
+                rows.append([g.code_id, g.run_id, g._note, status])
+            f.seek(0)
+            writer = csv.writer(f)
+            writer.writerows(rows)
+            fcntl.flock(f, fcntl.LOCK_UN)

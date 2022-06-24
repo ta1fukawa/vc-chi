@@ -11,8 +11,8 @@ from modules import global_value as g
 from modules import model, xvector, ssim_loss, vgg_perceptual_loss
 
 
-def main(config_path):
-    common.custom_init(config_path, '%Y%m/%d/%H%M%S')
+def main(config_path, note):
+    common.custom_init(config_path, '%Y%m/%d/%H%M%S', note)
 
     net = model.Net().to(g.device)
     logging.debug(f'MODEL: {net}')
@@ -75,6 +75,7 @@ def main(config_path):
 
         for stage_no, stage in enumerate(g.stages):
             logging.info(f'STAGE: {stage}')
+            common.update_note_status(f'stage_{stage_no}')
 
             if stage['optimizer'] == 'adam':
                 optimizer = torch.optim.Adam(net.parameters(), lr=stage['lr'])
@@ -82,46 +83,43 @@ def main(config_path):
                 optimizer = torch.optim.SGD(net.parameters(), lr=stage['lr'], momentum=stage['momentum'])
             logging.debug(f'SET OPTIMIZER: {optimizer}')
 
-            try:
-                patience = 0
+            patience = 0
 
-                best_train_loss = best_valdt_loss = {'loss': float('inf')}
+            best_train_loss = best_valdt_loss = {'loss': float('inf')}
 
-                for epoch in range(stage['num_epochs']):
-                    logging.info(f'EPOCH: {epoch + 1} (TOTAL: {total_epoch + 1})')
+            for epoch in range(stage['num_epochs']):
+                logging.info(f'EPOCH: {epoch + 1} (TOTAL: {total_epoch + 1})')
 
-                    train_loss = model_train   (net, train_dataset, criterion, optimizer)
-                    valdt_loss = model_validate(net, valdt_dataset, criterion)
+                train_loss = model_train   (net, train_dataset, criterion, optimizer)
+                valdt_loss = model_validate(net, valdt_dataset, criterion)
 
-                    logging.info(f'TRAIN LOSS: {train_loss["loss"]:.6f}, VALDT LOSS: {valdt_loss["loss"]:.6f}')
-                    logging.info(f'TRAIN COS_SIM: {train_loss["cos_sim"]:.6f}, VALDT COS_SIM: {valdt_loss["cos_sim"]:.6f}')
+                logging.info(f'TRAIN LOSS: {train_loss["loss"]:.6f}, VALDT LOSS: {valdt_loss["loss"]:.6f}')
+                logging.info(f'TRAIN COS_SIM: {train_loss["cos_sim"]:.6f}, VALDT COS_SIM: {valdt_loss["cos_sim"]:.6f}')
 
-                    if train_loss['loss'] < best_train_loss['loss']:
-                        best_train_loss = train_loss
-                        torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_best_train.pth')
-                        logging.debug(f'SAVE BEST TRAIN MODEL: {g.work_dir / "cp" / "best_train.pth"}')
+                if train_loss['loss'] < best_train_loss['loss']:
+                    best_train_loss = train_loss
+                    torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_best_train.pth')
+                    logging.debug(f'SAVE BEST TRAIN MODEL: {g.work_dir / "cp" / "best_train.pth"}')
 
-                    if valdt_loss['loss'] < best_valdt_loss['loss']:
-                        best_valdt_loss = valdt_loss
-                        torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth')
-                        logging.debug(f'SAVE BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
+                if valdt_loss['loss'] < best_valdt_loss['loss']:
+                    best_valdt_loss = valdt_loss
+                    torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth')
+                    logging.debug(f'SAVE BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
 
-                        patience = 0
-                    else:
-                        patience += 1
+                    patience = 0
+                else:
+                    patience += 1
 
-                    if patience >= stage['patience']:
-                        logging.info(f'EARLY STOPPING: {patience}')
-                        break
+                if patience >= stage['patience']:
+                    logging.info(f'EARLY STOPPING: {patience}')
+                    break
 
 
-                    for key in train_loss.keys():
-                        sw.add_scalars(key, {'train': train_loss[key], 'valdt': valdt_loss[key]}, total_epoch)
-                    sw.flush()
+                for key in train_loss.keys():
+                    sw.add_scalars(key, {'train': train_loss[key], 'valdt': valdt_loss[key]}, total_epoch)
+                sw.flush()
 
-                    total_epoch += 1
-            except KeyboardInterrupt:
-                logging.info('SKIPPED BY USER')
+                total_epoch += 1
 
             torch.save(net.state_dict(), g.work_dir / 'cp' / f'{stage_no}_final.pth')
 
@@ -259,11 +257,14 @@ def predict(net, stage_no, source_speaker, target_speaker, speech):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_path', type=pathlib.Path, default='vc_config.yml')
+    parser.add_argument('-n', '--note', type=str, default=None)
 
     try:
         main(**vars(parser.parse_args()))
+        common.update_note_status('done')
     except Exception as e:
         logging.error(traceback.format_exc())
+        common.update_note_status('error')
         raise e
     finally:
         logging.info('Done')
