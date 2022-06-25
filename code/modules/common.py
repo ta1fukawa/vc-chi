@@ -67,7 +67,7 @@ def custom_init(
     init_logger(g.work_dir / 'run.log')
     logging.info(f'CODE/RUN: {g.code_id}/{g.run_id}')
 
-    backup_codes(pathlib.Path(__file__).parent, g.work_dir / 'code')
+    backup_codes(pathlib.Path('code'), g.work_dir / 'code')
     shutil.copy(config_path, g.work_dir / 'config.yml')
 
     config = yaml.load(config_path.open(mode='r'), Loader=yaml.FullLoader)
@@ -95,9 +95,10 @@ def update_note_status(
 ):
     if note is not None:
         g._note = note
+        logging.info(f'NOTE: {note}')
 
     if g._note is not None:
-        note_path = pathlib.Path('logs', f'{g.code_id}.csv')
+        note_path = pathlib.Path('status', f'{g.code_id}.csv')
         if not note_path.exists():
             with note_path.open(mode='w') as f:
                 writer = csv.writer(f)
@@ -113,6 +114,7 @@ def update_note_status(
             else:
                 rows.append([g.code_id, g.run_id, g._note, status])
             f.seek(0)
+            f.truncate(0)
             writer = csv.writer(f)
             writer.writerows(rows)
             fcntl.flock(f, fcntl.LOCK_UN)

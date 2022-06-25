@@ -56,7 +56,7 @@ def main(config_path, note):
 
         code_loss = torch.nn.functional.l1_loss(q_feat, c_feat)
 
-        loss = r_loss + q_loss + code_loss
+        loss = q_loss + code_loss
 
         losses = {
             'cos_sim': cos_sim,

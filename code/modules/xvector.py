@@ -34,18 +34,18 @@ class Net(torch.nn.Module):
             torch.nn.Dropout2d(p=0.2),
             torch.nn.MaxPool2d(kernel_size=(1, 4)),
 
-            torch.nn.Conv2d(256, 2048, kernel_size=(5, 5), dilation=(1, 1), padding='same')
+            torch.nn.Conv2d(256, 2048, kernel_size=(5, 5), dilation=(1, 1), padding='same', bias=False),
         )
 
         self.compress = torch.nn.Sequential(
-            torch.nn.Linear(2048, g.style_dim),
+            torch.nn.Linear(2048, g.style_dim, bias=False),
         )
 
         self.cushion = torch.nn.Sequential(
             torch.nn.ReLU(),
             torch.nn.Dropout(p=0.2),
 
-            torch.nn.Linear(g.style_dim, 1024),
+            torch.nn.Linear(g.style_dim, 1024, bias=False),
             torch.nn.ReLU(),
             torch.nn.Dropout(p=0.2),
         )

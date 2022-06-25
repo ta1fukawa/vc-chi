@@ -1,8 +1,6 @@
 import torch
 import torch.nn.functional
 
-from modules import global_value as g
-
 
 class DoNothing(torch.nn.Module):
     def __init__(self):
