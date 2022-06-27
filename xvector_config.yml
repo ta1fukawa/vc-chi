@@ -1,9 +1,9 @@
 # Root
 extract_envelope : false
-model_load_path  : null # 'dest/2_train_xvector/20220627/180654/cp/0_best_valdt.pth'
+train_skip_load  : true
+model_load_path  : 'dest/2_train_xvector/20220627/204604/cp/0_best_valdt.pth'
 
 # ML
-log_interval  : 100
 batch_size    : 16
 speaker_size  : 40
 
@@ -36,9 +36,9 @@ min_pnm_len : 16 # originally 16
 
 # Dataset
 wav_dir : './dataset/jvs_ver1/wav' # './dataset/seiren_jvs011/wav'
-bak_dir : './dataset/jvs_ver1/wav_bak' # './dataset/seiren_jvs011/wav'
+bak_dir : './dataset/jvs_ver1/wav_all' # './dataset/seiren_jvs011/wav'
 lab_dir : './dataset/jvs_ver1/lab' # './dataset/seiren_jvs011/lab_tree'
-emb_dir : './dataset/jvs_ver1/emb/test' # './dataset/seiren_jvs011/emb/spk16_dim512'
+emb_dir : './dataset/jvs_ver1/emb/spk40_dim512' # './dataset/seiren_jvs011/emb/spk16_dim512'
 
 kana_path : './dataset/jvs_hiho/voiceactoress100_spaced_julius.txt'
 hmm_path  : './dataset/dictation-kit-4.5/model/phone_m/jnas-mono-16mix-gid.binhmm'

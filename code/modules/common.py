@@ -71,7 +71,7 @@ def custom_init(
     shutil.copy(config_path, g.work_dir / 'config.yml')
 
     config = yaml.load(config_path.open(mode='r'), Loader=yaml.FullLoader)
-    logging.info(f'CONFIG:\n{yaml.dump(config, default_flow_style=False)}')
+    logging.info(f'CONFIG: {config}')
 
     for k, v in config.items():
         setattr(g, k, v)
@@ -88,7 +88,7 @@ def custom_init(
 
     torch_reset_seed(0)
 
-g._note = None
+g._note = ''
 def update_note_status(
     status: str,
     note: str = None,
@@ -97,7 +97,7 @@ def update_note_status(
         g._note = note
         logging.info(f'NOTE: {note}')
 
-    if g._note is not None:
+    if True or g._note is not None:
         note_path = pathlib.Path('status', f'{g.code_id}.csv')
         if not note_path.exists():
             with note_path.open(mode='w') as f:

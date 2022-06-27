@@ -6,7 +6,7 @@ import traceback
 import torch
 import torch.utils.tensorboard
 
-from modules import common, dataset
+from modules import audio, common, dataset
 from modules import global_value as g
 from modules import xvector
 
@@ -17,7 +17,7 @@ def main(config_path, note):
     net = xvector.Net().to(g.device)
     logging.debug(f'MODEL: {net}')
 
-    if g.model_load_path is not None:
+    if not g.train_skip_load:
         net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
         logging.debug(f'LOAD MODEL: {g.model_load_path}')
 
@@ -33,7 +33,7 @@ def main(config_path, note):
                 elif indices[i] == indices[j]:
                     cos_sim_loss += 1 - torch.nn.functional.cosine_similarity(emb[i], emb[j], dim=0)
                 else:
-                    cos_sim_loss += torch.nn.functional.cosine_similarity(emb[i], emb[j], dim=0) + 1
+                    cos_sim_loss += 1 + torch.nn.functional.cosine_similarity(emb[i], emb[j], dim=0)
         cos_sim_loss /= indices.shape[0] * (indices.shape[0] - 1) * 2
 
         acc = (pred.argmax(dim=1) == indices).float().mean()
@@ -72,9 +72,9 @@ def main(config_path, note):
                 optimizer = torch.optim.SGD(parameters, lr=stage['lr'], momentum=stage['momentum'])
             logging.debug(f'SET OPTIMIZER: {optimizer}')
 
-            train_dataset = dataset.PnmDataset_JVS(stage['speaker_size'], **g.train_dataset)
-            valdt_dataset = dataset.PnmDataset_JVS(stage['speaker_size'], **g.valdt_dataset)
-            tests_dataset = dataset.PnmDataset_JVS(stage['speaker_size'], **g.tests_dataset)
+            train_dataset = dataset.PnmDataset(stage['speaker_size'], **g.train_dataset)
+            valdt_dataset = dataset.PnmDataset(stage['speaker_size'], **g.valdt_dataset)
+            tests_dataset = dataset.PnmDataset(stage['speaker_size'], **g.tests_dataset)
 
             patience = 0
 
@@ -123,6 +123,8 @@ def main(config_path, note):
 
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.10f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.10f}, TEST LOSS: {tests_loss["loss"]:.10f}')
             logging.info(f'BEST TRAIN ACC: {best_train_loss["acc"]:.4f}, BEST VALDT ACC: {best_valdt_loss["acc"]:.4f}, TEST ACC: {tests_loss["acc"]:.4f}')
+
+    predict(net)
 
 
 def model_train(net, dataset, criterion, optimizer):
@@ -217,6 +219,38 @@ def model_test(net, dataset, criterion):
     logging.debug(f'TEST ACC: {avg_losses["acc"]:.4f}')
 
     return avg_losses
+
+
+def predict(net):
+    net.eval()
+
+    wav_dir = pathlib.Path(g.bak_dir)
+    emb_dir = pathlib.Path(g.emb_dir)
+
+    emb_dir.mkdir(parents=True, exist_ok=True)
+
+    for speaker in sorted(wav_dir.iterdir()):
+        if not speaker.is_dir():
+            continue
+
+        speaker_waves = dataset.load_speaker_waves(speaker)
+        speaker_mels = [
+            dataset.padding(torch.from_numpy(audio.fast_stft(wave).T[1:]), g.pad_pnm_len)
+            for wave in speaker_waves
+        ]
+
+        if len(speaker_mels) > 0:
+            speaker_mels = torch.stack(speaker_mels, dim=0).to(g.device)
+            embs = []
+            for i in range((speaker_mels.shape[0] - 1) // g.batch_size + 1):
+                with torch.no_grad():
+                    _, emb = net(speaker_mels[i * g.batch_size: (i + 1) * g.batch_size])
+                    embs.append(emb)
+            embs = torch.cat(embs, dim=0)
+            emb = torch.mean(embs, dim=0).cpu()
+            torch.save(emb, str(emb_dir / f'{speaker.name}.pt'))
+
+    print('\033[K\033[G', end='')
 
 
 if __name__ == '__main__':

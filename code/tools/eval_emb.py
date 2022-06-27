@@ -17,25 +17,28 @@ from modules import xvector
 def main(config_path):
     common.custom_init(config_path, '%Y%m%d/%H%M%S')
 
-    net = xvector.Net().to(g.device)
-    logging.debug(f'MODEL: {net}')
-
-    if g.model_load_path is not None:
-        net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
-        logging.debug(f'LOAD MODEL: {g.model_load_path}')
-
-    predict(net)
+    predict()
 
 
-def predict(net):
-    net.eval()
-
+def predict():
     emb_dir = pathlib.Path(g.emb_dir)
 
     embs = []
     for emb_file in sorted(emb_dir.iterdir()):
         emb = torch.load(emb_file)
         embs.append(emb)
+
+    cos_sim = []
+    for emb_i in embs:
+        cos_sim_i = []
+        for emb_j in embs:
+            cos_sim_ij = torch.nn.functional.cosine_similarity(emb_i, emb_j, dim=0).item()
+            cos_sim_i.append(cos_sim_ij)
+        cos_sim.append(cos_sim_i)
+
+    with open(g.work_dir / 'emb_cossim.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerows(cos_sim)
 
     vec_distance = []
     for emb_i in embs:
@@ -45,7 +48,7 @@ def predict(net):
             vec_distance_i.append(vec_distance_ij)
         vec_distance.append(vec_distance_i)
 
-    with open(g.work_dir / 'vec_distance_mat.csv', 'w', newline='') as csvfile:
+    with open(g.work_dir / 'emb_dffdis.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerows(vec_distance)
 

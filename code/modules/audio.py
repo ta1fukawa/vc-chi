@@ -38,8 +38,8 @@ def load_wav(path):
     if sr != g.sample_rate:
         wave = librosa.resample(wave, sr, g.sample_rate)
 
-    wave = np.clip(wave, -1., 1.)
-    wave = _low_cut_filter(wave, g.highpass_cutoff)
+    # wave = np.clip(wave, -1., 1.)
+    # wave = _low_cut_filter(wave, g.highpass_cutoff)
 
     wave = wave / np.max(np.abs(wave))
 

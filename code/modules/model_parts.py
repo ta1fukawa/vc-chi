@@ -26,7 +26,7 @@ def get_activation(name, **kwargs):
         raise ValueError(f'Unknown activation: {name}')
 
 class Layer(torch.nn.Module):
-    def __init__(self, inp, oup, layer='linear', bn=False, bn_first=False, activation='linear', activation_param=None, **kwargs):
+    def __init__(self, inp, oup, layer='linear', bn=False, bn_first=False, activation='linear', weight_gain=None, activation_param=None, **kwargs):
         super(Layer, self).__init__()
 
         self.bn_first = bn_first
@@ -47,8 +47,11 @@ class Layer(torch.nn.Module):
         else:
             self.bn = DoNothing()
 
+        if weight_gain is None:
+            weight_gain = torch.nn.init.calculate_gain(activation, param=activation_param)
+
         self.activation = get_activation(activation)
-        torch.nn.init.xavier_uniform_(self.layer.weight, gain=torch.nn.init.calculate_gain(activation, param=activation_param))
+        torch.nn.init.xavier_uniform_(self.layer.weight, gain=weight_gain)
 
     def forward(self, x: torch.Tensor):
         if self.bn_first:

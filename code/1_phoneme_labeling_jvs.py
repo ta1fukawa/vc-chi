@@ -20,7 +20,7 @@ from modules import global_value as g
 def main(config_path):
     common.custom_init(config_path, '%Y%m%d/%H%M%S')
 
-    wav_dir = pathlib.Path(g.wav_dir)
+    wav_dir = pathlib.Path(g.bak_dir)
     lab_dir = pathlib.Path(g.lab_dir)
 
     lab_dir.mkdir(parents=True, exist_ok=True)
@@ -41,6 +41,9 @@ def main(config_path):
         lab_speaker.mkdir(parents=True, exist_ok=True)
 
         for wav_speech in sorted(wav_speaker.iterdir()):
+            if (lab_speaker / f'{wav_speech.stem}.lab').exists():
+                continue
+
             print(f'Process: {wav_speaker.name}/{wav_speech.name}\033[K\033[G', end='')
 
             wave, sr = librosa.load(wav_speech, sr=16000)
