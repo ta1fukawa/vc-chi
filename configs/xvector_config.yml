@@ -1,3 +1,6 @@
+# Model (xvector)
+style_dim : 8
+
 # ML
 batch_size    : 16
 speaker_size  : 64
@@ -50,7 +53,3 @@ fmax        : 7600  # To be increased/reduced depending on data.
 hop_size    : 120
 win_length  : 1024
 window      : 'hann'
-
-# Model (xvector)
-seg_len     : 128
-style_dim   : 512

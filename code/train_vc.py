@@ -39,10 +39,10 @@ def main(config_path, note):
 
     def criterion(c, t, r, q, c_feat, q_feat):
         with torch.no_grad():
-            _, c_emb = xvec_net(c)
+            _, t_emb = xvec_net(t)
             _, q_emb = xvec_net(q)
 
-        cos_sim = torch.mean(torch.nn.functional.cosine_similarity(c_emb, q_emb, dim=1))
+        cos_sim = torch.mean(torch.nn.functional.cosine_similarity(t_emb, q_emb, dim=1))
 
         c = c.unsqueeze(1); t = t.unsqueeze(1); r = r.unsqueeze(1); q = q.unsqueeze(1)
 

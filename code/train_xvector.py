@@ -249,14 +249,12 @@ def predict(net):
 
         embs.append(speaker_emb)
 
-    print('\033[K\033[G', end='')
-
     cos_sim_mat = torch.empty((len(embs), len(embs)))
-    vec_distance_mat = torch.empty((len(embs), len(embs)))
+    vec_dis_mat = torch.empty((len(embs), len(embs)))
     for i, emb_i in enumerate(embs):
         for j, emb_j in enumerate(embs):
             cos_sim_mat[i, j] = torch.nn.functional.cosine_similarity(emb_i, emb_j, dim=0).item()
-            vec_distance_mat[i, j] = torch.norm(emb_i - emb_j, p=2).item()
+            vec_dis_mat[i, j] = torch.norm(emb_i - emb_j, p=2).item()
 
     with open(g.work_dir / 'emb_cossim.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
@@ -264,13 +262,13 @@ def predict(net):
 
     with open(g.work_dir / 'emb_dffdis.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerows(vec_distance_mat.numpy())
+        writer.writerows(vec_dis_mat.numpy())
 
-    cos_sim = (torch.sum(cos_sim_mat) - len(embs)) / (len(embs) * (len(embs) - 1))
-    vec_distance = torch.sum(vec_distance_mat) / (len(embs) * (len(embs) - 1))
+    nodiag_cos_sim = torch.tril(cos_sim_mat, -1)[:, :-1] + torch.triu(cos_sim_mat, 1)[:, 1:]
+    nodiag_vec_dis = torch.tril(vec_dis_mat, -1)[:, :-1] + torch.triu(vec_dis_mat, 1)[:, 1:]
 
-    logging.debug(f'COS SIM: {cos_sim.item():.6f}')
-    logging.debug(f'VEC DISTANCE: {vec_distance.item():.6f}')
+    logging.info(f'COS SIM: {torch.mean(nodiag_cos_sim):.6f} (STD: {torch.std(nodiag_cos_sim):.6f})')
+    logging.info(f'VEC DISTANCE: {torch.mean(nodiag_vec_dis):.6f} (STD: {torch.std(nodiag_vec_dis):.6f})')
 
 
 if __name__ == '__main__':

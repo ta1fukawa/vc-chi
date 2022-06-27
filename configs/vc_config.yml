@@ -12,17 +12,15 @@ batch_size   : 8
 speaker_size : 64
 
 stages:
-  -
-    optimizer  : 'adam'
-    lr         : 1.e-3
-    num_epochs : 200
-    patience   : 20
-  -
-    optimizer  : 'sgd'
-    lr         : 1.e-2
-    momentum   : 0.9
-    num_epochs : 400
-    patience   : 40
+- optimizer  : 'adam'
+  lr         : 1.e-3
+  num_epochs : 200
+  patience   : 20
+- optimizer  : 'sgd'
+  lr         : 1.e-2
+  momentum   : 0.9
+  num_epochs : 400
+  patience   : 40
 
 vgg_weight  : 0
 sim_weight : 0
