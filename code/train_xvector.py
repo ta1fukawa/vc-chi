@@ -251,34 +251,26 @@ def predict(net):
 
     print('\033[K\033[G', end='')
 
-    cos_sim = []
-    for emb_i in embs:
-        cos_sim_i = []
-        for emb_j in embs:
-            cos_sim_ij = torch.nn.functional.cosine_similarity(emb_i, emb_j, dim=0).item()
-            cos_sim_i.append(cos_sim_ij)
-        cos_sim.append(cos_sim_i)
+    cos_sim_mat = torch.empty((len(embs), len(embs)))
+    vec_distance_mat = torch.empty((len(embs), len(embs)))
+    for i, emb_i in enumerate(embs):
+        for j, emb_j in enumerate(embs):
+            cos_sim_mat[i, j] = torch.nn.functional.cosine_similarity(emb_i, emb_j, dim=0).item()
+            vec_distance_mat[i, j] = torch.norm(emb_i - emb_j, p=2).item()
 
     with open(g.work_dir / 'emb_cossim.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerows(cos_sim)
+        writer.writerows(cos_sim_mat.numpy())
 
-    vec_distance = []
-    for emb_i in embs:
-        vec_distance_i = []
-        for emb_j in embs:
-            vec_distance_ij = torch.norm(emb_i - emb_j, p=2).item()
-            vec_distance_i.append(vec_distance_ij)
-        vec_distance.append(vec_distance_i)
 
     with open(g.work_dir / 'emb_dffdis.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerows(vec_distance)
+        writer.writerows(vec_distance_mat.numpy())
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config_path', type=pathlib.Path, default='xvector_config.yml')
+    parser.add_argument('-c', '--config_path', type=pathlib.Path, default='./configs/xvector_config.yml')
     parser.add_argument('-n', '--note', type=str, default=None)
 
     try:
