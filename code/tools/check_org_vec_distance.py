@@ -1,9 +1,13 @@
 import argparse
+import csv
 import logging
 import pathlib
+import sys
 import traceback
 
 import torch
+
+sys.path.append('code')
 
 from modules import audio, common
 from modules import global_value as g
@@ -18,9 +22,7 @@ def main(config_path):
 
     if g.model_load_path is not None:
         net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
-        logging.info(f'LOAD MODEL: {g.model_load_path}')
-    else:
-        raise Exception('model_load_path is None')
+        logging.debug(f'LOAD MODEL: {g.model_load_path}')
 
     predict(net)
 
@@ -28,33 +30,24 @@ def main(config_path):
 def predict(net):
     net.eval()
 
-    wav_dir = pathlib.Path(g.bak_dir)
     emb_dir = pathlib.Path(g.emb_dir)
 
-    emb_dir.mkdir(parents=True, exist_ok=True)
+    embs = []
+    for emb_file in sorted(emb_dir.iterdir()):
+        emb = torch.load(emb_file)
+        embs.append(emb)
 
-    for speaker in sorted(wav_dir.iterdir()):
-        if not speaker.is_dir():
-            continue
+    vec_distance = []
+    for emb_i in embs:
+        vec_distance_i = []
+        for emb_j in embs:
+            vec_distance_ij = torch.norm(emb_i - emb_j, p=2).item()
+            vec_distance_i.append(vec_distance_ij)
+        vec_distance.append(vec_distance_i)
 
-        speaker_mels = []
-
-        for wav in sorted(speaker.iterdir()):
-            print(f'Process: {speaker.name}/{wav.name}\033[K\033[G', end='')
-
-            wave, mel = audio.load_wav(wav)
-
-            speaker_mels.append(padding(torch.from_numpy(mel)))
-
-        if len(speaker_mels) > 0:
-            speaker_mels = torch.stack(speaker_mels, dim=0).to(g.device)
-            with torch.no_grad():
-                _, emb = net(speaker_mels)
-            emb = torch.mean(emb, dim=0).cpu()
-            print(str(torch.mean(torch.std(emb, dim=0)).cpu()) + '\033[K\033[G', end='')
-            torch.save(emb, str(emb_dir / f'{speaker.name}.pt'))
-
-    print('\033[K\033[G', end='')
+    with open(g.work_dir / 'vec_distance_mat.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerows(vec_distance)
 
 
 def padding(data):

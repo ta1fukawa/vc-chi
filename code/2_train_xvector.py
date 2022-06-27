@@ -22,14 +22,27 @@ def main(config_path, note):
         logging.debug(f'LOAD MODEL: {g.model_load_path}')
 
     nll_criterion = torch.nn.NLLLoss()
-    def criterion(pred, indices):
+    def criterion(pred, emb, indices):
         nll_loss = nll_criterion(pred, indices)
+
+        cos_sim_loss = 0.0
+        for i in range(indices.shape[0]):
+            for j in range(indices.shape[0]):
+                if i == j:
+                    continue
+                elif indices[i] == indices[j]:
+                    cos_sim_loss += 1 - torch.nn.functional.cosine_similarity(emb[i], emb[j], dim=0)
+                else:
+                    cos_sim_loss += torch.nn.functional.cosine_similarity(emb[i], emb[j], dim=0) + 1
+        cos_sim_loss /= indices.shape[0] * (indices.shape[0] - 1) * 2
+
         acc = (pred.argmax(dim=1) == indices).float().mean()
 
         loss = nll_loss
 
         losses = {
             'nll_loss': nll_loss,
+            'cos_sim_loss': cos_sim_loss,
             'loss': loss,
             'acc': acc,
         }
@@ -121,9 +134,9 @@ def model_train(net, dataset, criterion, optimizer):
         c = c.to(g.device)
         speaker_indices = speaker_indices.to(g.device)
 
-        pred, _ = net(c)
+        pred, emb = net(c)
 
-        loss, losses = criterion(pred, speaker_indices)
+        loss, losses = criterion(pred, emb, speaker_indices)
 
         optimizer.zero_grad()
         loss.backward()
@@ -156,9 +169,9 @@ def model_validate(net, dataset, criterion):
         speaker_indices = speaker_indices.to(g.device)
 
         with torch.no_grad():
-            pred, _ = net(c)
+            pred, emb = net(c)
 
-        loss, losses = criterion(pred, speaker_indices)
+        loss, losses = criterion(pred, emb, speaker_indices)
 
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()
@@ -186,9 +199,9 @@ def model_test(net, dataset, criterion):
         speaker_indices = speaker_indices.to(g.device)
 
         with torch.no_grad():
-            pred, _ = net(c)
+            pred, emb = net(c)
 
-        loss, losses = criterion(pred, speaker_indices)
+        loss, losses = criterion(pred, emb, speaker_indices)
 
         for k, v in losses.items():
             avg_losses[k] = avg_losses.get(k, 0.0) + v.item()

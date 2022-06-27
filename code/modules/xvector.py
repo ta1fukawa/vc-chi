@@ -18,40 +18,40 @@ class Net(torch.nn.Module):
             torch.nn.Conv2d(64, 64, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
             torch.nn.ReLU(),
             torch.nn.Dropout2d(p=0.2),
-            torch.nn.MaxPool2d(kernel_size=(1, 4)),
+            torch.nn.MaxPool2d(kernel_size=(2, 4)),
 
             torch.nn.Conv2d(64,  128, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
             torch.nn.ReLU(),
             torch.nn.Conv2d(128, 128, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
             torch.nn.ReLU(),
             torch.nn.Dropout2d(p=0.2),
-            torch.nn.MaxPool2d(kernel_size=(1, 4)),
+            torch.nn.MaxPool2d(kernel_size=(2, 4)),
 
             torch.nn.Conv2d(128, 256, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
             torch.nn.ReLU(),
             torch.nn.Conv2d(256, 256, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
             torch.nn.ReLU(),
             torch.nn.Dropout2d(p=0.2),
-            torch.nn.MaxPool2d(kernel_size=(1, 4)),
+            torch.nn.MaxPool2d(kernel_size=(2, 4)),
 
-            torch.nn.Conv2d(256, 2048, kernel_size=(5, 5), dilation=(1, 1), padding='same', bias=False),
+            torch.nn.Conv2d(256, 2048, kernel_size=(5, 5), dilation=(1, 1), padding='same'),
         )
 
         self.compress = torch.nn.Sequential(
-            torch.nn.Linear(2048, g.style_dim, bias=False),
+            torch.nn.Linear(2048, g.style_dim),
         )
 
         self.cushion = torch.nn.Sequential(
             torch.nn.ReLU(),
             torch.nn.Dropout(p=0.2),
 
-            torch.nn.Linear(g.style_dim, 1024, bias=False),
-            torch.nn.ReLU(),
-            torch.nn.Dropout(p=0.2),
+            # torch.nn.Linear(g.style_dim, 1024),
+            # torch.nn.ReLU(),
+            # torch.nn.Dropout(p=0.2),
         )
 
         self.classifier = torch.nn.Sequential(
-            torch.nn.Linear(1024, g.speaker_size),
+            torch.nn.Linear(g.style_dim, g.speaker_size),
             torch.nn.LogSoftmax(dim=-1),
         )
 

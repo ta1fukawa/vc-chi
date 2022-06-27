@@ -170,9 +170,15 @@ class PnmDataset_JVS(torch.utils.data.Dataset):
 
         speakers = sorted(pathlib.Path(g.wav_dir).iterdir())
         speakers = speakers[:speaker_size]
+        # speaker_list = [89, 90, 39, 2, 27, 68, 24, 99, 40, 34, 61, 71, 26, 63, 9, 92]
+        # speakers = [pathlib.Path(g.wav_dir, f'jvs{speaker_index + 1:03d}') for speaker_index in speaker_list]
 
         pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
         self.waves = pool.map(self.load_wav, speakers)
+        # self.waves = []
+        # for speaker in speakers:
+        #     speaker_waves = self.load_wav(speaker)
+        #     self.waves.append(speaker_waves)
 
         self.set_seed(0)
 
@@ -182,7 +188,7 @@ class PnmDataset_JVS(torch.utils.data.Dataset):
             phoneme_indices = self.rand_state.choice(len(self.waves[0]), g.batch_size, replace=True)
 
             data = torch.stack([
-                self.padding(torch.from_numpy(audio.fast_stft(self.waves[speaker_index][phoneme_index]).T[1:]), 32)
+                self.padding(torch.from_numpy(audio.fast_stft(self.waves[speaker_index][phoneme_index]).T[1:]), g.pad_pnm_len)
                 for speaker_index, phoneme_index in zip(speaker_indices, phoneme_indices)
             ], dim=0)
 
@@ -204,11 +210,12 @@ class PnmDataset_JVS(torch.utils.data.Dataset):
                     start_sample = int(float(start_sec) * g.sample_rate)
                     end_sample   = int(float(end_sec)   * g.sample_rate)
 
-                    if (end_sample - start_sample - g.fft_size) / g.hop_size + 1 < 16:
+                    if (end_sample - start_sample - g.fft_size) / g.hop_size + 1 < g.min_pnm_len:
                         continue
 
                     flat_labs.append((lab_path.stem, start_sample, end_sample))
 
+        print(len(flat_labs))
         flat_labs = flat_labs[self.phoneme_start:self.phoneme_end]
 
         tree_labs = []

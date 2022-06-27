@@ -71,7 +71,7 @@ def custom_init(
     shutil.copy(config_path, g.work_dir / 'config.yml')
 
     config = yaml.load(config_path.open(mode='r'), Loader=yaml.FullLoader)
-    logging.info(f'CONFIG: {config}')
+    logging.info(f'CONFIG:\n{yaml.dump(config, default_flow_style=False)}')
 
     for k, v in config.items():
         setattr(g, k, v)

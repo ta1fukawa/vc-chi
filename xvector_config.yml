@@ -1,83 +1,44 @@
 # Root
 extract_envelope : false
-model_load_path  : null
+model_load_path  : null # 'dest/2_train_xvector/20220627/180654/cp/0_best_valdt.pth'
 
 # ML
 log_interval  : 100
-batch_size    : 32
-speaker_size  : 64
+batch_size    : 16
+speaker_size  : 40
 
 stages:
-  -
-    optimizer  : 'adam'
-    lr: 1.e-3
-    num_epochs : 100
-    patience   : 8
-    speaker_size  : 8
-    only_classifier: false
-  -
-    optimizer  : 'adam'
-    lr: 1.e-3
-    num_epochs : 100
-    patience   : 8
-    speaker_size  : 16
-    only_classifier: true
-  -
-    optimizer  : 'adam'
-    lr: 1.e-3
-    num_epochs : 200
-    patience   : 16
-    speaker_size  : 16
-    only_classifier: false
-  -
-    optimizer  : 'adam'
-    lr: 1.e-3
-    num_epochs : 200
-    patience   : 16
-    speaker_size  : 32
-    only_classifier: true
-  -
-    optimizer  : 'adam'
-    lr: 1.e-3
-    num_epochs : 300
-    patience   : 24
-    speaker_size  : 32
-    only_classifier: false
-  -
-    optimizer  : 'adam'
-    lr: 1.e-3
-    num_epochs : 300
-    patience   : 24
-    speaker_size  : 64
-    only_classifier: true
-  -
-    optimizer  : 'adam'
-    lr: 1.e-3
-    num_epochs : 400
-    patience   : 32
-    speaker_size  : 64
-    only_classifier: false
+- optimizer  : 'adam'
+  lr: 1.e-4
+  num_epochs : 200
+  patience   : 10
+  speaker_size  : 40
+  only_classifier: false
 
+# Dataset (based on past papers)
 train_dataset:
   num_repeats   : 100
   phoneme_start : 0
-  phoneme_end   : 480
+  phoneme_end   : 520
 
 valdt_dataset:
   num_repeats   : 40
-  phoneme_start : 480
-  phoneme_end   : 500
+  phoneme_start : 0
+  phoneme_end   : 160
 
 tests_dataset:
   num_repeats   : 40
-  phoneme_start : 500
-  phoneme_end   : 520 # max: 539
+  phoneme_start : 160
+  phoneme_end   : 320
+
+pad_pnm_len : 32
+min_pnm_len : 16 # originally 16
 
 # Dataset
-wav_dir : './dataset/jvs_ver1/wav'
-bak_dir : './dataset/jvs_ver1/wav_bak'
-lab_dir : './dataset/jvs_ver1/lab'
-emb_dir : './dataset/jvs_ver1/emb_spk64_dim64'
+wav_dir : './dataset/jvs_ver1/wav' # './dataset/seiren_jvs011/wav'
+bak_dir : './dataset/jvs_ver1/wav_bak' # './dataset/seiren_jvs011/wav'
+lab_dir : './dataset/jvs_ver1/lab' # './dataset/seiren_jvs011/lab_tree'
+emb_dir : './dataset/jvs_ver1/emb/test' # './dataset/seiren_jvs011/emb/spk16_dim512'
 
 kana_path : './dataset/jvs_hiho/voiceactoress100_spaced_julius.txt'
 hmm_path  : './dataset/dictation-kit-4.5/model/phone_m/jnas-mono-16mix-gid.binhmm'
@@ -98,6 +59,4 @@ window      : 'hann'
 
 # Model (xvector)
 seg_len     : 128
-style_dim   : 64
-
-pnm_len : 32
+style_dim   : 512
