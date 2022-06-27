@@ -1,5 +1,6 @@
 import argparse
 import logging
+import multiprocessing
 import pathlib
 import sys
 import tempfile
@@ -24,40 +25,40 @@ def main(config_path):
     lab_dir = pathlib.Path(g.lab_dir)
 
     lab_dir.mkdir(parents=True, exist_ok=True)
-    tmp_dir = tempfile.TemporaryDirectory()
-    tmp_path = pathlib.Path(tmp_dir.name)
-    tmp_wav_path = tmp_path / 'tmp.wav'
+    yomi_dir = tempfile.TemporaryDirectory()
+    yomi_dir_path = pathlib.Path(yomi_dir.name)
 
     with open(g.kana_path, 'r') as f:
-        kana_list = f.read().splitlines()
+        yomi_list = f.read().splitlines()
 
-    for i, kana in enumerate(kana_list):
-        with (tmp_path / f'VOICEACTRESS100_{i + 1:03d}.txt').open('w') as f:
+    for i, kana in enumerate(yomi_list):
+        with (yomi_dir_path / f'VOICEACTRESS100_{i + 1:03d}.txt').open('w') as f:
             f.write(kana)
 
     for wav_speaker in sorted(wav_dir.iterdir()):
+        print(f'Processing {wav_speaker.name}')
 
         lab_speaker = lab_dir / wav_speaker.name
         lab_speaker.mkdir(parents=True, exist_ok=True)
 
         for wav_speech in sorted(wav_speaker.iterdir()):
             if (lab_speaker / f'{wav_speech.stem}.lab').exists():
-                continue
-
-            print(f'Process: {wav_speaker.name}/{wav_speech.name}\033[K\033[G', end='')
+                return
 
             wave, sr = librosa.load(wav_speech, sr=16000)
-            sf.write(tmp_wav_path, wave, sr, subtype='PCM_16')
+            wav_file = tempfile.NamedTemporaryFile(suffix='.wav')
+            wav_path = pathlib.Path(wav_file.name)
+            sf.write(wav_path, wave, sr, subtype='PCM_16')
 
             args = {
-                'wav_file': tmp_wav_path,
-                'input_yomi_file': tmp_path / f'{wav_speech.stem}.txt',
+                'wav_file': wav_path,
+                'input_yomi_file': yomi_dir_path / f'{wav_speech.stem}.txt',
                 'output_seg_file': lab_speaker / f'{wav_speech.stem}.lab',
                 'input_yomi_type': 'katakana',
                 'like_openjtalk': False,
                 'input_text_file': None,
                 'output_text_file': None,
-                'hmm_model': g.hmm_path,
+                'hmm_model': './dataset/dictation-kit-4.5/model/phone_m/jnas-mono-16mix-gid.binhmm',
                 'model_type': ModelType.gmm,
                 'padding_second': 0,
                 'options': None
@@ -67,6 +68,10 @@ def main(config_path):
                 run_segment(**args, only_2nd_path=False)
             except:
                 run_segment(**args, only_2nd_path=True)
+
+            wav_file.close()
+
+    yomi_dir.cleanup()
 
 
 if __name__ == '__main__':

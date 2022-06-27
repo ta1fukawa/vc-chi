@@ -13,7 +13,7 @@ with zipfile.ZipFile(zip_path, 'r') as zip_file:
 
 jvs_dir = pathlib.Path('./dataset', zip_path.stem)
 wav_dir = jvs_dir / 'wav'
-bak_dir = jvs_dir / 'wav_bak'
+all_dir = jvs_dir / 'wav_all'
 
 speakers = sorted(jvs_dir.iterdir())
 
@@ -42,7 +42,7 @@ sf.write(str(wav_dir / f'jvs058' / f'VOICEACTRESS100_014.wav'), wave[:int(sr * 3
 sf.write(str(wav_dir / f'jvs058' / f'VOICEACTRESS100_015.wav'), wave[int(sr * 3.94):], sr, subtype='PCM_16')
 
 
-shutil.copytree(str(wav_dir), str(bak_dir))
+shutil.copytree(str(wav_dir), str(all_dir))
 
 
 ## Wav: Fix error wav files
@@ -62,5 +62,5 @@ for speaker in sorted(wav_dir.iterdir()):
 # Remove
 ss = [(9, 86), (9, 95), (17, 82), (18, 72), (22, 47), (24, 88), (36, 57), (38, 6), (38, 41), (43, 85), (47, 85), (48, 43), (48, 76), (51, 25), (55, 56), (55, 76), (55, 99), (58, 14), (59, 61), (59, 64), (59, 66), (59, 74), (60, 82), (74, 62), (98, 60), (98, 99)]
 for speaker, speech in ss:
-    if (bak_dir / f'jvs{speaker:03d}' / f'VOICEACTRESS100_{speech:03d}.wav').exists():
-        (bak_dir / f'jvs{speaker:03d}' / f'VOICEACTRESS100_{speech:03d}.wav').unlink()
+    if (all_dir / f'jvs{speaker:03d}' / f'VOICEACTRESS100_{speech:03d}.wav').exists():
+        (all_dir / f'jvs{speaker:03d}' / f'VOICEACTRESS100_{speech:03d}.wav').unlink()

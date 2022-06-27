@@ -24,25 +24,24 @@ def main(config_path):
     lab_dir = pathlib.Path(g.lab_dir)
 
     lab_dir.mkdir(parents=True, exist_ok=True)
-    tmp_wav_dir = tempfile.TemporaryDirectory()
 
     with open(g.kana_path, 'r') as f:
-        kana_list = f.read().splitlines()
+        yomi_list = f.read().splitlines()
 
     for i, wav in enumerate(sorted(sorted(wav_dir.iterdir())[0].iterdir())):
         logging.info(f'Process: {wav.name}')
 
-        tmp_wav_path = pathlib.Path(tmp_wav_dir.name) / f'{wav.stem}.wav'
-
         wave, sr = librosa.load(wav, sr=16000)
-        sf.write(tmp_wav_path, wave, sr, subtype='PCM_16')
+        wav_file = tempfile.NamedTemporaryFile(suffix='.wav')
+        wav_path = pathlib.Path(wav_file.name)
+        sf.write(wav_path, wave, sr, subtype='PCM_16')
 
-        with tempfile.NamedTemporaryFile('w') as f:
-            f.write(kana_list[i])
+        with tempfile.NamedTemporaryFile('w', suffix='.txt') as f:
+            f.write(yomi_list[i])
             f.seek(0)
 
             args = {
-                'wav_file': tmp_wav_path,
+                'wav_file': wav_path,
                 'input_yomi_file': pathlib.Path(f.name),
                 'output_seg_file': lab_dir / f'{wav.stem}.lab',
                 'input_yomi_type': 'katakana',
@@ -60,7 +59,9 @@ def main(config_path):
             except:
                 run_segment(**args, only_2nd_path=True)
 
-    tmp_wav_dir.cleanup()
+            wav_file.close()
+
+    yomi_dir.cleanup()
 
 
 if __name__ == '__main__':

@@ -89,9 +89,15 @@ class PnmDataset(torch.utils.data.Dataset):
         speakers = sorted(pathlib.Path(g.wav_dir).iterdir())
         speakers = speakers[:speaker_size]
 
-        pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
-        self.waves = pool.map(load_speaker_waves, zip(speakers, [phoneme_start, phoneme_end] * len(speakers)))
-        pool.close(); pool.join()
+        self.waves = []
+        for speaker in speakers:
+            speaker_waves = load_speaker_waves(speaker, phoneme_start, phoneme_end)
+            if speaker_waves is not None:
+                self.waves.append(speaker_waves)
+                if len(self.waves) >= speaker_size:
+                    break
+        else:
+            raise ValueError('Speaker size is too large.')
 
         self.set_seed(0)
 
@@ -117,8 +123,8 @@ def load_speaker_waves(speaker, phoneme_start=None, phoneme_end=None):
     speaker_waves = []
 
     flat_labs = []
-    for lab_path in sorted((pathlib.Path(g.lab_dir) / speaker.name).iterdir()):
-        with lab_path.open('r') as f:
+    for wav_path in sorted(speaker.iterdir()):
+        with pathlib.Path(g.lab_dir, speaker.name, f'{wav_path.stem}.lab').open('r') as f:
             reader = csv.reader(f, delimiter='\t')
             for start_sec, end_sec, phoneme in reader:
                 if phoneme in ['silB', 'silE', 'sp']:
@@ -130,19 +136,23 @@ def load_speaker_waves(speaker, phoneme_start=None, phoneme_end=None):
                 if (end_sample - start_sample - g.fft_size) / g.hop_size + 1 < g.min_pnm_len:
                     continue
 
-                flat_labs.append((lab_path.stem, start_sample, end_sample))
+                flat_labs.append((wav_path.name, start_sample, end_sample))
 
-    flat_labs = flat_labs[phoneme_start:phoneme_end]
+    if phoneme_start is not None and phoneme_end is not None:
+        if len(flat_labs) < phoneme_end - phoneme_start:
+            return None
+
+        flat_labs = flat_labs[phoneme_start:phoneme_end]
 
     tree_labs = []
-    for lab_path in sorted((pathlib.Path(g.lab_dir) / speaker.name).iterdir()):
-        labs = [(start_sample, end_sample) for lab_name, start_sample, end_sample in flat_labs if lab_name == lab_path.stem]
+    for wav_path in sorted(speaker.iterdir()):
+        labs = [(start_sample, end_sample) for wav_path_name, start_sample, end_sample in flat_labs if wav_path_name == wav_path.name]
         if len(labs) > 0:
-            tree_labs.append((lab_path.stem, labs))
+            tree_labs.append((wav_path, labs))
 
     speaker_waves = []
-    for lab_name, labs in tree_labs:
-        wave, sr = librosa.load(speaker / f'{lab_name}.wav', sr=g.sample_rate)
+    for wav_path, labs in tree_labs:
+        wave, sr = librosa.load(wav_path, sr=g.sample_rate)
 
         for start_sample, end_sample in labs:
             speaker_waves.append(wave[start_sample:end_sample])

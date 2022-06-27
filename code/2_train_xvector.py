@@ -17,9 +17,10 @@ def main(config_path, note):
     net = xvector.Net().to(g.device)
     logging.debug(f'MODEL: {net}')
 
-    if not g.train_skip_load:
-        net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
-        logging.debug(f'LOAD MODEL: {g.model_load_path}')
+    if g.model_load_path is not None:
+        raise Exception('model_load_path must be None')
+        # net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
+        # logging.debug(f'LOAD MODEL: {g.model_load_path}')
 
     nll_criterion = torch.nn.NLLLoss()
     def criterion(pred, emb, indices):
@@ -224,7 +225,7 @@ def model_test(net, dataset, criterion):
 def predict(net):
     net.eval()
 
-    wav_dir = pathlib.Path(g.bak_dir)
+    wav_dir = pathlib.Path(g.all_dir)
     emb_dir = pathlib.Path(g.emb_dir)
 
     emb_dir.mkdir(parents=True, exist_ok=True)
