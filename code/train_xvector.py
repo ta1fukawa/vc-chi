@@ -222,7 +222,7 @@ def predict(net):
     net.eval()
 
     wav_dir = pathlib.Path(g.all_dir)
-    emb_dir = pathlib.Path(g.emb_dir)
+    emb_dir = pathlib.Path(g.work_dir, 'emb')
 
     emb_dir.mkdir(parents=True, exist_ok=True)
 
@@ -262,10 +262,15 @@ def predict(net):
         writer = csv.writer(csvfile)
         writer.writerows(cos_sim_mat.numpy())
 
-
     with open(g.work_dir / 'emb_dffdis.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerows(vec_distance_mat.numpy())
+
+    cos_sim = (torch.sum(cos_sim_mat) - len(embs)) / (len(embs) * (len(embs) - 1))
+    vec_distance = torch.sum(vec_distance_mat) / (len(embs) * (len(embs) - 1))
+
+    logging.debug(f'COS SIM: {cos_sim.item():.6f}')
+    logging.debug(f'VEC DISTANCE: {vec_distance.item():.6f}')
 
 
 if __name__ == '__main__':

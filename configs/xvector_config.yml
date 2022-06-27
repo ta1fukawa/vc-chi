@@ -33,7 +33,6 @@ min_pnm_len : 14 # originally 16
 wav_dir : './dataset/jvs_ver1/wav' # './dataset/seiren_jvs011/wav'
 all_dir : './dataset/jvs_ver1/wav_all' # './dataset/seiren_jvs011/wav'
 lab_dir : './dataset/jvs_ver1/lab' # './dataset/seiren_jvs011/lab_tree'
-emb_dir : './dataset/jvs_ver1/emb/spk64_dim512' # './dataset/seiren_jvs011/emb/spk16_dim512'
 
 kana_path : './dataset/jvs_hiho/voiceactoress100_spaced_julius.txt'
 hmm_path  : './dataset/dictation-kit-4.5/model/phone_m/jnas-mono-16mix-gid.binhmm'

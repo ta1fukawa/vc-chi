@@ -6,20 +6,20 @@ import traceback
 import torch
 import torch.utils.tensorboard
 
-from modules import audio, common, dataset
+from modules import audio, common, dataset, vcmodel
 from modules import global_value as g
-from modules import model, xvector, ssim_loss, vgg_perceptual_loss
+from modules import xvector, ssim_loss, vgg_perceptual_loss
 
 
 def main(config_path, note):
     common.custom_init(config_path, '%Y%m/%d/%H%M%S', note)
 
-    net = model.Net().to(g.device)
+    net = vcmodel.Net().to(g.device)
     logging.debug(f'MODEL: {net}')
 
-    if g.model_load_path is not None:
-        net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
-        logging.debug(f'LOAD MODEL: {g.model_load_path}')
+    # if g.model_load_path is not None:
+    #     net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
+    #     logging.debug(f'LOAD MODEL: {g.model_load_path}')
 
     train_dataset = dataset.MelDataset(g.use_same_speaker, **g.train_dataset)
     valdt_dataset = dataset.MelDataset(g.use_same_speaker, **g.valdt_dataset)
@@ -132,8 +132,7 @@ def main(config_path, note):
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, TEST LOSS: {tests_loss["loss"]:.6f}')
             logging.info(f'BEST TRAIN COS_SIM: {best_train_loss["cos_sim"]:.6f}, BEST VALDT COS_SIM: {best_valdt_loss["cos_sim"]:.6f}, TEST COS_SIM: {tests_loss["cos_sim"]:.6f}')
 
-            if g.need_predict:
-                predict(net, stage_no, **g.predict)
+            predict(net, stage_no, **g.predict)
 
 
 def model_train(net, dataset, criterion, optimizer):
