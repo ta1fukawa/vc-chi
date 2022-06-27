@@ -53,15 +53,6 @@ def predict():
         writer.writerows(vec_distance)
 
 
-def padding(data):
-    if len(data) < g.seg_len:
-        len_pad = g.seg_len - len(data)
-        data = torch.cat((data, torch.zeros(len_pad, data.shape[1])), dim=0)
-    else:
-        data = data[:g.seg_len]
-    return data
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_path', type=pathlib.Path, default='xvector_config.yml')

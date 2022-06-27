@@ -1,4 +1,5 @@
 import argparse
+import csv
 import logging
 import pathlib
 import traceback
@@ -16,11 +17,6 @@ def main(config_path, note):
 
     net = xvector.Net().to(g.device)
     logging.debug(f'MODEL: {net}')
-
-    if g.model_load_path is not None:
-        raise Exception('model_load_path must be None')
-        # net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
-        # logging.debug(f'LOAD MODEL: {g.model_load_path}')
 
     nll_criterion = torch.nn.NLLLoss()
     def criterion(pred, emb, indices):
@@ -230,6 +226,7 @@ def predict(net):
 
     emb_dir.mkdir(parents=True, exist_ok=True)
 
+    embs = []
     for speaker in sorted(wav_dir.iterdir()):
         if not speaker.is_dir():
             continue
@@ -240,18 +237,43 @@ def predict(net):
             for wave in speaker_waves
         ]
 
-        if len(speaker_mels) > 0:
-            speaker_mels = torch.stack(speaker_mels, dim=0).to(g.device)
-            embs = []
-            for i in range((speaker_mels.shape[0] - 1) // g.batch_size + 1):
-                with torch.no_grad():
-                    _, emb = net(speaker_mels[i * g.batch_size: (i + 1) * g.batch_size])
-                    embs.append(emb)
-            embs = torch.cat(embs, dim=0)
-            emb = torch.mean(embs, dim=0).cpu()
-            torch.save(emb, str(emb_dir / f'{speaker.name}.pt'))
+        speaker_mels = torch.stack(speaker_mels, dim=0).to(g.device)
+        speaker_embs = []
+        for i in range((speaker_mels.shape[0] - 1) // g.batch_size + 1):
+            with torch.no_grad():
+                _, speaker_emb = net(speaker_mels[i * g.batch_size: (i + 1) * g.batch_size])
+                speaker_embs.append(speaker_emb)
+        speaker_embs = torch.cat(speaker_embs, dim=0)
+        speaker_emb = torch.mean(speaker_embs, dim=0).cpu()
+        torch.save(speaker_emb, str(emb_dir / f'{speaker.name}.pt'))
+
+        embs.append(speaker_emb)
 
     print('\033[K\033[G', end='')
+
+    cos_sim = []
+    for emb_i in embs:
+        cos_sim_i = []
+        for emb_j in embs:
+            cos_sim_ij = torch.nn.functional.cosine_similarity(emb_i, emb_j, dim=0).item()
+            cos_sim_i.append(cos_sim_ij)
+        cos_sim.append(cos_sim_i)
+
+    with open(g.work_dir / 'emb_cossim.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerows(cos_sim)
+
+    vec_distance = []
+    for emb_i in embs:
+        vec_distance_i = []
+        for emb_j in embs:
+            vec_distance_ij = torch.norm(emb_i - emb_j, p=2).item()
+            vec_distance_i.append(vec_distance_ij)
+        vec_distance.append(vec_distance_i)
+
+    with open(g.work_dir / 'emb_dffdis.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerows(vec_distance)
 
 
 if __name__ == '__main__':
