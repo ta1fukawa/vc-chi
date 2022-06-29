@@ -23,9 +23,9 @@ class ContentEncoder(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.conv1 = mp.Layer(g.num_mels + g.style_dim, 512, layer='conv1d', bn=True, activation='relu', kernel_size=5, padding='same')
-        self.conv2 = mp.Layer(512, 512, layer='conv1d', bn=True, activation='relu', kernel_size=5, padding='same')
-        self.conv3 = mp.Layer(512, 512, layer='conv1d', bn=True, activation='relu', kernel_size=5, padding='same')
+        self.conv1 = mp.Layer(g.num_mels + g.style_dim, 512, layer='conv1d', bn=True, bn_first=False, kernel_size=5, padding='same', activation='relu')
+        self.conv2 = mp.Layer(512, 512, layer='conv1d', bn=True, bn_first=False, kernel_size=5, padding='same', activation='relu')
+        self.conv3 = mp.Layer(512, 512, layer='conv1d', bn=True, bn_first=False, kernel_size=5, padding='same', activation='relu')
 
         self.lstm = torch.nn.LSTM(512, g.dim_neck, 2, batch_first=True, bidirectional=True)
 
@@ -54,18 +54,18 @@ class Decoder(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.lstm1 = torch.nn.LSTM(g.dim_neck * 2 + g.style_dim, 512, 1, batch_first=True)
-        self.conv1 = mp.Layer(512, 512, layer='conv1d', bn=True, activation='relu', kernel_size=5, padding='same')
-        self.conv2 = mp.Layer(512, 512, layer='conv1d', bn=True, activation='relu', kernel_size=5, padding='same')
-        self.conv3 = mp.Layer(512, 512, layer='conv1d', bn=True, activation='relu', kernel_size=5, padding='same')
-        self.lstm2 = torch.nn.LSTM(512, 1024, 2, batch_first=True)
+        # self.lstm1 = torch.nn.LSTM(g.dim_neck * 2 + g.style_dim, 512, 1, batch_first=True)
+        self.conv1 = mp.Layer(g.dim_neck * 2 + g.style_dim, 512, layer='conv1d', bn=True, bn_first=False, kernel_size=5, padding='same', activation='relu')
+        self.conv2 = mp.Layer(512, 512, layer='conv1d', bn=True, bn_first=False, kernel_size=5, padding='same', activation='relu')
+        self.conv3 = mp.Layer(512, 512, layer='conv1d', bn=True, bn_first=False, kernel_size=5, padding='same', activation='relu')
+        self.lstm2 = torch.nn.LSTM(512, 1024, 3, batch_first=True)
         self.line = mp.Layer(1024, g.num_mels, layer='linear')
 
     def forward(self, feat: torch.Tensor, s_emb: torch.Tensor):
         s_emb = s_emb.unsqueeze(1).expand(-1, feat.size(1), -1)  # Expand to time dimension
         x = torch.cat([feat, s_emb], dim=-1)  # Concatenate in frequency dimension
 
-        x, _ = self.lstm1(x)
+        # x, _ = self.lstm1(x)
 
         x = x.transpose(1, 2)
         x = self.conv1(x)

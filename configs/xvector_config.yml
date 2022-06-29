@@ -8,8 +8,8 @@ speaker_size  : 64
 stages:
 - optimizer  : 'adam'
   lr: 1.e-4
-  num_epochs : 200
-  patience   : 10
+  num_epochs : 1000
+  patience   : 20
   speaker_size  : 64
   only_classifier: false
 

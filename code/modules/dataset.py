@@ -43,7 +43,7 @@ class MelDataset(torch.utils.data.Dataset):
                     torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_index].name}.pt')
                     for speaker_index in speaker_indices
                 ], dim=0)
-                # emb = torch.zeros_like(emb)
+                emb = torch.zeros_like(emb)
 
                 speaker_indices = torch.from_numpy(speaker_indices).long()
                 speech_indices  = torch.from_numpy(speech_indices).long()
@@ -70,8 +70,8 @@ class MelDataset(torch.utils.data.Dataset):
                     torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_index].name}.pt')
                     for speaker_index in s_speaker_indices
                 ], dim=0)
-                # c_emb = torch.zeros_like(c_emb)
-                # s_emb = torch.zeros_like(s_emb)
+                c_emb = torch.zeros_like(c_emb)
+                s_emb = torch.zeros_like(s_emb)
 
                 c_speaker_indices = torch.from_numpy(c_speaker_indices).long()
                 c_speech_indices  = torch.from_numpy(c_speech_indices).long()

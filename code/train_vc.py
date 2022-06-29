@@ -28,28 +28,13 @@ def main(config_path, note):
     vgg_criterion = vgg_perceptual_loss.VGGPerceptualLoss().to(g.device)
     sim_criterion = ssim_loss.SSIMLoss(channel=1).to(g.device)
 
-    xvec_net = xvector.Net().to(g.device)
-    logging.debug(f'XVECTOR MODEL: {xvec_net}')
-
-    if g.xvec_model_path is None:
-        raise Exception('xvec_model_path is None')
-
-    xvec_net.load_state_dict(torch.load(g.xvec_model_path, map_location=g.device))
-    logging.debug(f'LOAD XVECTOR MODEL: {g.xvec_model_path}')
-
     def criterion(c, t, r, q, c_feat, q_feat):
-        with torch.no_grad():
-            _, t_emb = xvec_net(t)
-            _, q_emb = xvec_net(q)
-
-        cos_sim = torch.mean(torch.nn.functional.cosine_similarity(t_emb, q_emb, dim=1))
-
         c = c.unsqueeze(1); t = t.unsqueeze(1); r = r.unsqueeze(1); q = q.unsqueeze(1)
 
         r_mse_loss = torch.nn.functional.mse_loss(r, t)
         r_loss = r_mse_loss
 
-        q_mse_loss = torch.nn.functional.mse_loss(r, t)
+        q_mse_loss = torch.nn.functional.mse_loss(q, t)
         q_vgg_loss = vgg_criterion(q, t)
         q_sim_loss = sim_criterion(q, t)
         q_loss = q_mse_loss + g.vgg_weight * q_vgg_loss + g.sim_weight * q_sim_loss
@@ -59,7 +44,6 @@ def main(config_path, note):
         loss = q_loss + code_loss
 
         losses = {
-            'cos_sim': cos_sim,
             'r_mse_loss': r_mse_loss, 'r_loss': r_loss,
             'q_mse_loss': q_mse_loss, 'q_vgg_loss': q_vgg_loss, 'q_sim_loss': q_sim_loss, 'q_loss': q_loss,
             'code_loss': code_loss,
@@ -94,7 +78,6 @@ def main(config_path, note):
                 valdt_loss = model_validate(net, valdt_dataset, criterion)
 
                 logging.info(f'TRAIN LOSS: {train_loss["loss"]:.6f}, VALDT LOSS: {valdt_loss["loss"]:.6f}')
-                logging.info(f'TRAIN COS_SIM: {train_loss["cos_sim"]:.6f}, VALDT COS_SIM: {valdt_loss["cos_sim"]:.6f}')
 
                 if train_loss['loss'] < best_train_loss['loss']:
                     best_train_loss = train_loss
@@ -130,7 +113,6 @@ def main(config_path, note):
             tests_loss = model_test(net, tests_dataset, criterion)
 
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, TEST LOSS: {tests_loss["loss"]:.6f}')
-            logging.info(f'BEST TRAIN COS_SIM: {best_train_loss["cos_sim"]:.6f}, BEST VALDT COS_SIM: {best_valdt_loss["cos_sim"]:.6f}, TEST COS_SIM: {tests_loss["cos_sim"]:.6f}')
 
             predict(net, stage_no, **g.predict)
 
