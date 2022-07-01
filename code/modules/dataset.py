@@ -11,8 +11,8 @@ from modules import global_value as g
 
 
 class MelDataset(torch.utils.data.Dataset):
-    def __init__(self, use_same_speaker, num_repeats, speaker_start=None, speaker_end=None, speech_start=None, speech_end=None):
-        self.use_same_speaker = use_same_speaker
+    def __init__(self, num_repeats, speaker_start=None, speaker_end=None, speech_start=None, speech_end=None):
+        self.use_same_speaker = g.use_same_speaker
         self.num_repeats = num_repeats
 
         speakers = sorted(pathlib.Path(g.mel_dir).iterdir())
@@ -27,6 +27,7 @@ class MelDataset(torch.utils.data.Dataset):
             self.files.append(speeches)
 
         self.set_seed(0)
+        self.set_use_zero_vec(False)
 
     def __iter__(self):
         for _ in range(self.num_repeats):
@@ -43,7 +44,9 @@ class MelDataset(torch.utils.data.Dataset):
                     torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_index].name}.pt')
                     for speaker_index in speaker_indices
                 ], dim=0)
-                emb = torch.zeros_like(emb)
+
+                if self.use_zero_vec:
+                    emb = torch.zeros_like(emb)
 
                 speaker_indices = torch.from_numpy(speaker_indices).long()
                 speech_indices  = torch.from_numpy(speech_indices).long()
@@ -70,8 +73,10 @@ class MelDataset(torch.utils.data.Dataset):
                     torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_index].name}.pt')
                     for speaker_index in s_speaker_indices
                 ], dim=0)
-                c_emb = torch.zeros_like(c_emb)
-                s_emb = torch.zeros_like(s_emb)
+
+                if self.use_zero_vec:
+                    c_emb = torch.zeros_like(c_emb)
+                    s_emb = torch.zeros_like(s_emb)
 
                 c_speaker_indices = torch.from_numpy(c_speaker_indices).long()
                 c_speech_indices  = torch.from_numpy(c_speech_indices).long()
@@ -80,6 +85,9 @@ class MelDataset(torch.utils.data.Dataset):
 
     def set_seed(self, seed):
         self.rand_state = np.random.RandomState(seed)
+
+    def set_use_zero_vec(self, use_zero_vec):
+        self.use_zero_vec = use_zero_vec
 
 
 class PnmDataset(torch.utils.data.Dataset):

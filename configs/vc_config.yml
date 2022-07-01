@@ -17,11 +17,18 @@ stages:
   lr         : 1.e-3
   num_epochs : 200
   patience   : 20
+  use_zero_vec: true
+- optimizer  : 'adam'
+  lr         : 1.e-3
+  num_epochs : 200
+  patience   : 20
+  use_zero_vec: false
 - optimizer  : 'sgd'
   lr         : 1.e-2
   momentum   : 0.9
   num_epochs : 400
   patience   : 40
+  use_zero_vec: false
 
 vgg_weight  : 0
 sim_weight : 0
@@ -52,11 +59,6 @@ seg_len : 128
 
 wav_dir : './dataset/seiren_jvs011/wav'
 mel_dir : './dataset/seiren_jvs011/mel'
-
-predict:
-  source_speaker : 'jvs091'
-  target_speaker : 'jvs092'
-  speech         : 'VOICEACTRESS100_091'
 
 # Audio
 highpass_cutoff : 70.0
@@ -89,5 +91,5 @@ waveglow:
   window      : 'hann'
 
 # Model (vc)
-dim_neck    : 16
+dim_neck    : 32
 lstm_stride : 8 # = 128 // dim

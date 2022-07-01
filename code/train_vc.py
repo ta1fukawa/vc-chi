@@ -6,7 +6,8 @@ import traceback
 import torch
 import torch.utils.tensorboard
 
-from modules import audio, common, dataset, vcmodel
+from modules import audio, common, vcmodel
+from modules import dataset as ds
 from modules import global_value as g
 from modules import xvector, ssim_loss, vgg_perceptual_loss
 
@@ -21,9 +22,9 @@ def main(config_path, note):
     #     net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
     #     logging.debug(f'LOAD MODEL: {g.model_load_path}')
 
-    train_dataset = dataset.MelDataset(g.use_same_speaker, **g.train_dataset)
-    valdt_dataset = dataset.MelDataset(g.use_same_speaker, **g.valdt_dataset)
-    tests_dataset = dataset.MelDataset(g.use_same_speaker, **g.tests_dataset)
+    train_dataset = ds.MelDataset(**g.train_dataset)
+    valdt_dataset = ds.MelDataset(**g.valdt_dataset)
+    tests_dataset = ds.MelDataset(**g.tests_dataset)
 
     vgg_criterion = vgg_perceptual_loss.VGGPerceptualLoss().to(g.device)
     sim_criterion = ssim_loss.SSIMLoss(channel=1).to(g.device)
@@ -41,7 +42,7 @@ def main(config_path, note):
 
         code_loss = torch.nn.functional.l1_loss(q_feat, c_feat)
 
-        loss = q_loss + code_loss
+        loss = r_loss + q_loss + code_loss
 
         losses = {
             'r_mse_loss': r_mse_loss, 'r_loss': r_loss,
@@ -66,6 +67,10 @@ def main(config_path, note):
             elif stage['optimizer'] == 'sgd':
                 optimizer = torch.optim.SGD(net.parameters(), lr=stage['lr'], momentum=stage['momentum'])
             logging.debug(f'SET OPTIMIZER: {optimizer}')
+
+            train_dataset.set_use_zero_vec(stage['use_zero_vec'])
+            valdt_dataset.set_use_zero_vec(stage['use_zero_vec'])
+            tests_dataset.set_use_zero_vec(stage['use_zero_vec'])
 
             patience = 0
 
@@ -110,11 +115,12 @@ def main(config_path, note):
                 torch.load(g.work_dir / 'cp' / f'{stage_no}_best_valdt.pth', map_location=g.device)
                 logging.debug(f'LOAD BEST VALDT MODEL: {g.work_dir / "cp" / "best_valdt.pth"}')
 
-            tests_loss = model_test(net, tests_dataset, criterion)
+            tests_loss_same = model_test(net, tests_dataset, criterion, True)
+            tests_loss_diff = model_test(net, tests_dataset, criterion, False)
 
-            logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, TEST LOSS: {tests_loss["loss"]:.6f}')
+            logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, SAME TEST LOSS: {tests_loss_same["loss"]:.6f}, DIFF TEST LOSS: {tests_loss_diff["loss"]:.6f}')
 
-            predict(net, stage_no, **g.predict)
+            predict(net, tests_dataset, stage_no)
 
 
 def model_train(net, dataset, criterion, optimizer):
@@ -184,8 +190,10 @@ def model_validate(net, dataset, criterion):
     return avg_losses
 
 
-def model_test(net, dataset, criterion):
+def model_test(net, dataset, criterion, use_same_speaker):
     net.eval()
+    dataset.set_seed(0)
+    dataset.use_same_speaker = use_same_speaker
 
     avg_losses = {}
 
@@ -216,23 +224,28 @@ def model_test(net, dataset, criterion):
     return avg_losses
 
 
-def predict(net, stage_no, source_speaker, target_speaker, speech):
+def predict(net, dataset, stage_no):
     net.eval()
+    dataset.set_seed(0)
+    dataset.use_same_speaker = False
 
-    c = torch.load(f'{g.mel_dir}/{source_speaker}/{speech}.pt').unsqueeze(0).to(g.device)
-    t = torch.load(f'{g.mel_dir}/{target_speaker}/{speech}.pt').unsqueeze(0).to(g.device)
-    c_emb = torch.load(f'{g.emb_dir}/{source_speaker}.pt').unsqueeze(0).to(g.device)
-    s_emb = torch.load(f'{g.emb_dir}/{target_speaker}.pt').unsqueeze(0).to(g.device)
+    c, t, c_emb, s_emb, _ = next(iter(dataset))
+    c = c.to(g.device); t = t.to(g.device)
+    c_emb = c_emb.to(g.device); s_emb = s_emb.to(g.device)
 
     with torch.no_grad():
         c_feat = net.content_enc(c, c_emb)
-        r      = net.decoder(c_feat, s_emb)
-        q      = r + net.postnet(r)
+        r_same = net.decoder(c_feat, c_emb)
+        r_diff = net.decoder(c_feat, s_emb)
+        q_same = r_same + net.postnet(r_same)
+        q_diff = r_diff + net.postnet(r_diff)
 
-    audio.save(f'0_source',     c.squeeze(0))
-    audio.save(f'0_target',     t.squeeze(0))
-    audio.save(f'{stage_no}_rec_before', r.squeeze(0))
-    audio.save(f'{stage_no}_rec_after',  q.squeeze(0))
+    audio.save(f'0_source', c[0].squeeze(0))
+    audio.save(f'0_target', t[0].squeeze(0))
+    audio.save(f'{stage_no}_r_source', r_same[0].squeeze(0))
+    audio.save(f'{stage_no}_r_target', r_diff[0].squeeze(0))
+    audio.save(f'{stage_no}_q_source', q_same[0].squeeze(0))
+    audio.save(f'{stage_no}_q_target', q_diff[0].squeeze(0))
 
 
 if __name__ == '__main__':
