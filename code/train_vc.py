@@ -18,9 +18,9 @@ def main(config_path, note):
     net = vcmodel.Net().to(g.device)
     logging.debug(f'MODEL: {net}')
 
-    # if g.model_load_path is not None:
-    #     net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
-    #     logging.debug(f'LOAD MODEL: {g.model_load_path}')
+    if g.model_load_path is not None:
+        net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
+        logging.debug(f'LOAD MODEL: {g.model_load_path}')
 
     train_dataset = ds.MelDataset(**g.train_dataset)
     valdt_dataset = ds.MelDataset(**g.valdt_dataset)

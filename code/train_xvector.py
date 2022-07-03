@@ -18,6 +18,10 @@ def main(config_path, note):
     net = xvector.Net().to(g.device)
     logging.debug(f'MODEL: {net}')
 
+    if g.model_load_path is not None:
+        net.load_state_dict(torch.load(g.model_load_path))
+        logging.debug(f'LOAD MODEL: {g.model_load_path}')
+
     nll_criterion = torch.nn.NLLLoss()
     def criterion(pred, emb, indices):
         nll_loss = nll_criterion(pred, indices)
@@ -226,7 +230,7 @@ def predict(net):
 
     emb_dir.mkdir(parents=True, exist_ok=True)
 
-    embs = []
+    embs_left = []; embs_right = []
     for speaker in sorted(wav_dir.iterdir()):
         if not speaker.is_dir():
             continue
@@ -247,12 +251,16 @@ def predict(net):
         speaker_emb = torch.mean(speaker_embs, dim=0).cpu()
         torch.save(speaker_emb, str(emb_dir / f'{speaker.name}.pt'))
 
-        embs.append(speaker_emb)
+        emb_left  = torch.mean(speaker_embs[:speaker_embs.shape[0] // 2], dim=0).cpu()
+        emb_right = torch.mean(speaker_embs[speaker_embs.shape[0] // 2:], dim=0).cpu()
 
-    cos_sim_mat = torch.empty((len(embs), len(embs)))
-    vec_dis_mat = torch.empty((len(embs), len(embs)))
-    for i, emb_i in enumerate(embs):
-        for j, emb_j in enumerate(embs):
+        embs_left.append(emb_left)
+        embs_right.append(emb_right)
+
+    cos_sim_mat = torch.empty((len(embs_left), len(embs_right)))
+    vec_dis_mat = torch.empty((len(embs_left), len(embs_right)))
+    for i, emb_i in enumerate(embs_left):
+        for j, emb_j in enumerate(embs_right):
             cos_sim_mat[i, j] = torch.nn.functional.cosine_similarity(emb_i, emb_j, dim=0).item()
             vec_dis_mat[i, j] = torch.norm(emb_i - emb_j, p=2).item()
 
@@ -269,6 +277,10 @@ def predict(net):
 
     logging.info(f'COS SIM: {torch.mean(nodiag_cos_sim):.6f} (STD: {torch.std(nodiag_cos_sim):.6f})')
     logging.info(f'VEC DISTANCE: {torch.mean(nodiag_vec_dis):.6f} (STD: {torch.std(nodiag_vec_dis):.6f})')
+    logging.info(f'COS SIM/DIAG: {torch.mean(torch.diag(cos_sim_mat, 0)):.6f} (STD: {torch.std(torch.diag(cos_sim_mat, 0)):.6f})')
+    logging.info(f'VEC DISTANCE/DIAG: {torch.mean(torch.diag(vec_dis_mat, 0)):.6f} (STD: {torch.std(torch.diag(vec_dis_mat, 0)):.6f})')
+
+    return cos_sim_mat, vec_dis_mat
 
 
 if __name__ == '__main__':

@@ -48,7 +48,10 @@ class Layer(torch.nn.Module):
             self.bn = DoNothing()
 
         if weight_gain is None:
-            weight_gain = torch.nn.init.calculate_gain(activation, param=activation_param)
+            if activation == 'gelu':
+                weight_gain = 1
+            else:
+                weight_gain = torch.nn.init.calculate_gain(activation, param=activation_param)
 
         self.activation = get_activation(activation)
         torch.nn.init.xavier_uniform_(self.layer.weight, gain=weight_gain)

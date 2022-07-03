@@ -1,5 +1,6 @@
 # Model (xvector)
-style_dim : 8
+style_dim : 16
+model_load_path: null
 
 # ML
 batch_size    : 16

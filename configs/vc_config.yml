@@ -1,6 +1,6 @@
 # Root
 use_same_speaker : true
-# model_load_path  : null
+model_load_path  : null
 
 # X-Vector
 emb_dir : './dest/train_xvector/20220628/052352/emb'
@@ -91,5 +91,5 @@ waveglow:
   window      : 'hann'
 
 # Model (vc)
-dim_neck    : 32
+dim_neck    : 64
 lstm_stride : 8 # = 128 // dim
