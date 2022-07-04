@@ -56,7 +56,7 @@ class Layer(torch.nn.Module):
         self.activation = get_activation(activation)
         torch.nn.init.xavier_uniform_(self.layer.weight, gain=weight_gain)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.bn_first:
             x = self.bn(x)
         x = self.layer(x)

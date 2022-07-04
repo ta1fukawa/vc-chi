@@ -3,13 +3,14 @@ import logging
 import pathlib
 import traceback
 
+import numpy as np
 import torch
 import torch.utils.tensorboard
 
-from modules import audio, common, vcmodel
+from modules import audio, common
 from modules import dataset as ds
 from modules import global_value as g
-from modules import xvector, ssim_loss, vgg_perceptual_loss
+from modules import ssim_loss, vcmodel, vgg_perceptual_loss, xvector
 
 
 def main(config_path, note):
@@ -120,6 +121,7 @@ def main(config_path, note):
 
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, SAME TEST LOSS: {tests_loss_same["loss"]:.6f}, DIFF TEST LOSS: {tests_loss_diff["loss"]:.6f}')
 
+            decoder_test(net, train_dataset)
             predict(net, tests_dataset, stage_no)
 
 
@@ -222,6 +224,47 @@ def model_test(net, dataset, criterion, use_same_speaker):
     logging.debug(f'TEST LOSSES: {avg_losses}')
 
     return avg_losses
+
+
+def decoder_test(net, dataset):
+    net.eval()
+    dataset.set_seed(0)
+
+    emb_ratio_list = []
+
+    for i, (c, _, c_emb, s_emb, _) in enumerate(dataset):
+        c = c.to(g.device)
+        c_emb = c_emb.to(g.device); s_emb = s_emb.to(g.device)
+
+        with torch.no_grad():
+            c_feat = net.content_enc(c, c_emb)
+
+            # r = net.decoder(c_feat, s_emb)
+            s_emb = s_emb.unsqueeze(1).expand(-1, c_feat.size(1), -1)
+            x = torch.cat([c_feat, s_emb], dim=-1)
+            x = x.transpose(1, 2)
+
+            x_feat, x_emb = x.clone(), x.clone()
+            x_feat[:, :g.dim_neck * 2, :] = 0
+            x_emb[:, g.dim_neck * 2:, :]  = 0
+
+            bias = net.decoder.conv1.layer.bias.clone()
+            bias = bias.unsqueeze(0).unsqueeze(2).expand(x_feat.size(0), -1, 128)
+
+            y_feat = net.decoder.conv1.layer(x_feat) - bias
+            y_emb  = net.decoder.conv1.layer(x_emb)  - bias
+
+            y_feat = torch.mean(y_feat, dim=(0, 2)).cpu().numpy()
+            y_emb  = torch.mean(y_emb,  dim=(0, 2)).cpu().numpy()
+
+            emb_ratio = y_emb / (y_feat + y_emb)
+            emb_ratio = np.where(y_emb < 0, 0, emb_ratio)
+            emb_ratio = np.where(y_feat < 0, 1, emb_ratio)
+            emb_ratio = np.where(y_feat + y_emb < 0, np.nan, emb_ratio)
+            emb_ratio_list.append(emb_ratio)
+
+    mean_emb_ratio = np.nanmean(np.array(emb_ratio_list), axis=0)
+    logging.info(f'MEAN EMB RATIO:\n{mean_emb_ratio}')
 
 
 def predict(net, dataset, stage_no):

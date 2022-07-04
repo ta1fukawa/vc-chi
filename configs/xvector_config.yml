@@ -1,18 +1,18 @@
 # Model (xvector)
 style_dim : 16
-model_load_path: null
+model_load_path: './dest/train_xvector/20220628/052352/cp/0_best_valdt.pth'
 
 # ML
 batch_size    : 16
 speaker_size  : 64
 
-stages:
-- optimizer  : 'adam'
-  lr: 1.e-4
-  num_epochs : 1000
-  patience   : 20
-  speaker_size  : 64
-  only_classifier: false
+stages: []
+# - optimizer  : 'adam'
+#   lr: 1.e-4
+#   num_epochs : 1000
+#   patience   : 20
+#   speaker_size  : 64
+#   only_classifier: false
 
 # Dataset (based on past papers)
 train_dataset:

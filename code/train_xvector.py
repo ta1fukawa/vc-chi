@@ -7,7 +7,7 @@ import traceback
 import torch
 import torch.utils.tensorboard
 
-from modules import audio, common, dataset
+from modules import audio, common, dataset as ds
 from modules import global_value as g
 from modules import xvector
 
@@ -73,9 +73,9 @@ def main(config_path, note):
                 optimizer = torch.optim.SGD(parameters, lr=stage['lr'], momentum=stage['momentum'])
             logging.debug(f'SET OPTIMIZER: {optimizer}')
 
-            train_dataset = dataset.PnmDataset(stage['speaker_size'], **g.train_dataset)
-            valdt_dataset = dataset.PnmDataset(stage['speaker_size'], **g.valdt_dataset)
-            tests_dataset = dataset.PnmDataset(stage['speaker_size'], **g.tests_dataset)
+            train_dataset = ds.PnmDataset(stage['speaker_size'], **g.train_dataset)
+            valdt_dataset = ds.PnmDataset(stage['speaker_size'], **g.valdt_dataset)
+            tests_dataset = ds.PnmDataset(stage['speaker_size'], **g.tests_dataset)
 
             patience = 0
 
