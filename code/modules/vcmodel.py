@@ -56,7 +56,7 @@ class Decoder(torch.nn.Module):
         # self.lstm1 = torch.nn.LSTM(g.dim_neck * 2 + g.style_dim, 512, 1, batch_first=True)
         # self.conv1 = mp.Layer(512, 512, layer='conv1d', bn=True, bn_first=True, kernel_size=5, padding='same', activation='gelu')
 
-        self.conv1 = mp.Layer(g.dim_neck * 2 + g.style_dim, 512, layer='conv1d', bn=True, bn_first=True, kernel_size=5, padding='same', activation='gelu')
+        self.conv1 = mp.Layer(g.dim_neck * 2 + g.style_dim, 512, layer='conv1d', bn=True, bn_first=True, kernel_size=5, padding='same', bias=False, activation='relu')
 
         self.conv2 = mp.Layer(1, 64, layer='conv2d', bn=True, bn_first=True, kernel_size=5, padding='same', activation='gelu')
         self.conv2a = mp.Layer(64, 64, layer='conv2d', bn=True, bn_first=True, kernel_size=5, padding='same', activation='gelu')

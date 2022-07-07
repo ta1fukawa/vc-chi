@@ -27,7 +27,7 @@ class MelDataset(torch.utils.data.Dataset):
             self.files.append(speeches)
 
         self.set_seed(0)
-        self.set_use_zero_vec(False)
+        self.set_embed_type('emb')
 
     def __iter__(self):
         for _ in range(self.num_repeats):
@@ -35,59 +35,61 @@ class MelDataset(torch.utils.data.Dataset):
                 speaker_indices = self.rand_state.choice(len(self.files),    g.batch_size, replace=True)
                 speech_indices  = self.rand_state.choice(len(self.files[0]), g.batch_size, replace=True)
 
-                data = torch.stack([
-                    padding(torch.load(self.files[speaker_index][speech_index]), g.seg_len)
-                    for speaker_index, speech_index in zip(speaker_indices, speech_indices)
-                ], dim=0)
-
-                emb = torch.stack([
-                    torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_index].name}.pt')
-                    for speaker_index in speaker_indices
-                ], dim=0)
-
-                if self.use_zero_vec:
-                    emb = torch.zeros_like(emb)
+                data = self.load_data(speaker_indices, speech_indices)
+                emb  = self.load_emb(speaker_indices)
 
                 speaker_indices = torch.from_numpy(speaker_indices).long()
-                speech_indices  = torch.from_numpy(speech_indices).long()
+                speech_indices  = torch.from_numpy(speech_indices) .long()
+
                 yield data, data, emb, emb, (speaker_indices, speech_indices, speaker_indices)
             else:
                 c_speaker_indices = self.rand_state.choice(len(self.files),    g.batch_size, replace=True)
                 s_speaker_indices = self.rand_state.choice(len(self.files),    g.batch_size, replace=True)
                 c_speech_indices  = self.rand_state.choice(len(self.files[0]), g.batch_size, replace=True)
 
-                c_data = torch.stack([
-                    padding(torch.load(self.files[speaker_index][speech_index]), g.seg_len)
-                    for speaker_index, speech_index in zip(c_speaker_indices, c_speech_indices)
-                ], dim=0)
-                t_data = torch.stack([
-                    padding(torch.load(self.files[speaker_index][speech_index]), g.seg_len)
-                    for speaker_index, speech_index in zip(s_speaker_indices, c_speech_indices)
-                ], dim=0)
+                # s_speaker_indices = torch.zeros_like(s_speaker_indices) ###
 
-                c_emb = torch.stack([
-                    torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_index].name}.pt')
-                    for speaker_index in c_speaker_indices
-                ], dim=0)
-                s_emb = torch.stack([
-                    torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_index].name}.pt')
-                    for speaker_index in s_speaker_indices
-                ], dim=0)
-
-                if self.use_zero_vec:
-                    c_emb = torch.zeros_like(c_emb)
-                    s_emb = torch.zeros_like(s_emb)
+                c_data = self.load_data(c_speaker_indices, c_speech_indices)
+                t_data = self.load_data(s_speaker_indices, c_speech_indices)
+                c_emb  = self.load_emb(c_speaker_indices)
+                s_emb  = self.load_emb(s_speaker_indices)
 
                 c_speaker_indices = torch.from_numpy(c_speaker_indices).long()
-                c_speech_indices  = torch.from_numpy(c_speech_indices).long()
+                c_speech_indices  = torch.from_numpy(c_speech_indices) .long()
                 s_speaker_indices = torch.from_numpy(s_speaker_indices).long()
+
                 yield c_data, t_data, c_emb, s_emb, (c_speaker_indices, c_speech_indices, s_speaker_indices)
 
-    def set_seed(self, seed):
+    def set_seed(self, seed=0):
         self.rand_state = np.random.RandomState(seed)
 
-    def set_use_zero_vec(self, use_zero_vec):
-        self.use_zero_vec = use_zero_vec
+    def set_embed_type(self, embed_type):
+        self.embed_type = embed_type
+
+    def load_data(self, speaker_indices, speech_indices):
+        data = torch.stack([
+            padding(torch.load(self.files[speaker_index][speech_index]), g.seg_len)
+            for speaker_index, speech_index in zip(speaker_indices, speech_indices)
+        ], dim=0)
+
+        return data
+
+    def load_emb(self, speaker_indices):
+        emb = torch.stack([
+            torch.load(pathlib.Path(g.emb_dir) / f'{self.speakers[speaker_index].name}.pt')
+            for speaker_index in speaker_indices
+        ], dim=0)
+
+        if self.embed_type == 'emb':
+            pass
+        elif self.embed_type == 'zero':
+            emb = torch.zeros_like(emb)
+        elif self.embed_type == 'label':
+            emb = speaker_indices.unsqueeze(1).expand(-1, emb.shape[1])
+        else:
+            raise ValueError('Unknown embed type')
+
+        return emb
 
 
 class PnmDataset(torch.utils.data.Dataset):

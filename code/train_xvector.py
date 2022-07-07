@@ -235,9 +235,9 @@ def predict(net):
         if not speaker.is_dir():
             continue
 
-        speaker_waves = dataset.load_speaker_waves(speaker)
+        speaker_waves = ds.load_speaker_waves(speaker)
         speaker_mels = [
-            dataset.padding(torch.from_numpy(audio.fast_stft(wave).T[1:]), g.pad_pnm_len)
+            ds.padding(torch.from_numpy(audio.fast_stft(wave).T[1:]), g.pad_pnm_len)
             for wave in speaker_waves
         ]
 
