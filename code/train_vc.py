@@ -4,6 +4,7 @@ import logging
 import math
 import pathlib
 import traceback
+import csv
 
 import numpy as np
 import torch
@@ -123,11 +124,11 @@ def main(config_path, note):
 
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, SAME TEST LOSS: {tests_loss_same["loss"]:.6f}, DIFF TEST LOSS: {tests_loss_diff["loss"]:.6f}')
 
-            predict(net, tests_dataset, stage_no)
+            predict(net, stage_no, stage['embed_type'])
     
     if len(g.stages) == 0:
         logging.info(f'NO STAGE')
-        predict(net, tests_dataset, 0)
+        predict(net, 0, 'label') ###
 
 
 def model_train(net, dataset, criterion, optimizer):
@@ -231,51 +232,50 @@ def model_test(net, dataset, criterion, use_same_speaker):
     return avg_losses
 
 
-def predict(net, dataset, stage_no):
+def predict(net, stage_no, embed_type):
     net.eval()
 
-    num_speakers = g.test_num_speakers  # len(dataset.files)
+    dataset = ds.MelDataset(0, speaker_end=g.pred_num_speakers, speech_end=g.batch_size, embed_type=embed_type)
 
-    speaker_indices = np.arange(num_speakers)
-    speech_indices  = np.zeros(num_speakers, dtype=np.int)
+    speaker_indices = np.arange(g.pred_num_speakers)
+    speech_indices  = np.zeros(g.pred_num_speakers, dtype=np.int)
     data = dataset.load_data(speaker_indices, speech_indices)
 
-    for i in range(num_speakers):
+    for i in range(g.pred_num_speakers):
         audio.save(f'org/{i + 1:03d}', data[i].squeeze(1))
 
-    random_order  = np.random.permutation(num_speakers**2)
-    inverse_order = np.argsort(random_order)
+    c_speaker_indices = np.arange(g.batch_size) % g.pred_num_speakers
+    s_speaker_indices = np.arange(g.batch_size) % g.pred_num_speakers
+    speech_indices = np.arange(g.batch_size)
 
-    convert_pairs = np.array(list(itertools.product(speaker_indices, speaker_indices)))
-    convert_pairs = convert_pairs[random_order]
+    mse_mat = np.zeros((g.pred_num_speakers, g.pred_num_speakers))
 
-    mat = []
+    for i in range(g.pred_num_speakers):
+        for j in range(g.pred_num_speakers):
+            c_speaker_indices[0] = i
+            s_speaker_indices[0] = j
 
-    for i in range(math.ceil(len(convert_pairs) / g.batch_size)):
-        indices = (np.arange(g.batch_size) + i * g.batch_size) % len(convert_pairs)
-        c_speaker_indices = convert_pairs[indices][:, 0]
-        s_speaker_indices = convert_pairs[indices][:, 1]
-        speech_indices = np.zeros(g.batch_size, dtype=np.int)
+            c = dataset.load_data(c_speaker_indices, speech_indices)
+            t = dataset.load_data(s_speaker_indices, speech_indices)
+            c_emb  = dataset.load_emb(c_speaker_indices)
+            s_emb  = dataset.load_emb(s_speaker_indices)
 
-        c = dataset.load_data(c_speaker_indices, speech_indices)
-        c_emb  = dataset.load_emb(c_speaker_indices)
-        s_emb  = dataset.load_emb(s_speaker_indices)
+            c = c.to(g.device); t = t.to(g.device)
+            c_emb = c_emb.to(g.device); s_emb = s_emb.to(g.device)
 
-        c = c.to(g.device)
-        c_emb = c_emb.to(g.device); s_emb = s_emb.to(g.device)
+            with torch.no_grad():
+                c_feat = net.content_enc(c, c_emb)
+                r = net.decoder(c_feat, s_emb)
+                q = r + net.postnet(r)
 
-        with torch.no_grad():
-            c_feat = net.content_enc(c, c_emb)
-            r = net.decoder(c_feat, c_emb)
-            q = r + net.postnet(r)
+            mse_loss = torch.nn.functional.mse_loss(q, t)
+            mse_mat[i, j] = mse_loss.item()
 
-        mat.append(q.squeeze(1))
+            audio.save(f'stage{stage_no}/{i + 1:03d}to{j + 1:03d}', q.squeeze(1)[0])
 
-    mat = torch.cat(mat, dim=0)
-    mat = mat[inverse_order]
-
-    for i, (c, s) in enumerate(convert_pairs):
-        audio.save(f'stage{stage_no}/{c + 1:03d}to{s + 1:03d}', mat[i])
+    with open(g.work_dir / f'stage{stage_no}_mse_mat.csv', 'w') as f:
+        writer = csv.writer(f)
+        writer.writerows(mse_mat)
 
 
 if __name__ == '__main__':

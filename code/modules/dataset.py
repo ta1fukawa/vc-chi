@@ -11,7 +11,7 @@ from modules import global_value as g
 
 
 class MelDataset(torch.utils.data.Dataset):
-    def __init__(self, num_repeats, speaker_start=None, speaker_end=None, speech_start=None, speech_end=None):
+    def __init__(self, num_repeats, speaker_start=None, speaker_end=None, speech_start=None, speech_end=None, embed_type='emb'):
         self.use_same_speaker = g.use_same_speaker
         self.num_repeats = num_repeats
 
@@ -27,7 +27,7 @@ class MelDataset(torch.utils.data.Dataset):
             self.files.append(speeches)
 
         self.set_seed(0)
-        self.set_embed_type('emb')
+        self.set_embed_type(embed_type)
 
     def __iter__(self):
         for _ in range(self.num_repeats):
