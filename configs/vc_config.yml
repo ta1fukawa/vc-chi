@@ -1,6 +1,6 @@
 # Root
 use_same_speaker : false
-model_load_path  : null
+model_load_path  : 'dest/train_vc/202207/08/044838/cp/2_best_valdt.pth'
 
 # X-Vector
 emb_dir : './dest/train_xvector/20220628/052352/emb'
@@ -10,24 +10,25 @@ style_dim : 16
 # ML
 log_interval : 100
 batch_size   : 8
+test_num_speakers: 3
 
-stages:
+stages: []
 # - optimizer  : 'adam'
 #   lr         : 1.e-3
 #   num_epochs : 200
 #   patience   : 20
 #   embed_type: 'zero'
-- optimizer  : 'adam'
-  lr         : 1.e-3
-  num_epochs : 200
-  patience   : 20
-  embed_type: 'label'
-- optimizer  : 'sgd'
-  lr         : 1.e-3
-  momentum   : 0.9
-  num_epochs : 400
-  patience   : 40
-  embed_type: 'label'
+# - optimizer  : 'adam'
+#   lr         : 1.e-3
+#   num_epochs : 200
+#   patience   : 20
+#   embed_type: 'emb'
+# - optimizer  : 'sgd'
+#   lr         : 1.e-3
+#   momentum   : 0.9
+#   num_epochs : 400
+#   patience   : 40
+#   embed_type: 'emb'
 
 vgg_weight  : 0
 sim_weight : 0
@@ -35,21 +36,21 @@ sim_weight : 0
 train_dataset:
   num_repeats   : 100
   speaker_start : 0
-  speaker_end   : 2
+  speaker_end   : 3
   speech_start  : 0
   speech_end    : 80
 
 valdt_dataset:
   num_repeats   : 20
   speaker_start : 0
-  speaker_end   : 2
+  speaker_end   : 3
   speech_start  : 80
   speech_end    : 90
 
 tests_dataset:
   num_repeats   : 1
   speaker_start : 0
-  speaker_end   : 2
+  speaker_end   : 3
   speech_start  : 90
   speech_end    : 100
 
@@ -90,5 +91,5 @@ waveglow:
   window      : 'hann'
 
 # Model (vc)
-dim_neck    : 32
-lstm_stride : 8 # = 128 // dim
+dim_neck    : 128
+lstm_stride : 2 # = 128 // dim

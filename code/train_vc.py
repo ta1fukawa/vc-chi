@@ -1,8 +1,11 @@
 import argparse
+import itertools
 import logging
+import math
 import pathlib
 import traceback
 
+import numpy as np
 import torch
 import torch.utils.tensorboard
 
@@ -121,6 +124,10 @@ def main(config_path, note):
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, SAME TEST LOSS: {tests_loss_same["loss"]:.6f}, DIFF TEST LOSS: {tests_loss_diff["loss"]:.6f}')
 
             predict(net, tests_dataset, stage_no)
+    
+    if len(g.stages) == 0:
+        logging.info(f'NO STAGE')
+        predict(net, tests_dataset, 0)
 
 
 def model_train(net, dataset, criterion, optimizer):
@@ -226,26 +233,49 @@ def model_test(net, dataset, criterion, use_same_speaker):
 
 def predict(net, dataset, stage_no):
     net.eval()
-    dataset.set_seed(0)
-    dataset.use_same_speaker = False
 
-    c, t, c_emb, s_emb, _ = next(iter(dataset))
-    c = c.to(g.device); t = t.to(g.device)
-    c_emb = c_emb.to(g.device); s_emb = s_emb.to(g.device)
+    num_speakers = g.test_num_speakers  # len(dataset.files)
 
-    with torch.no_grad():
-        c_feat = net.content_enc(c, c_emb)
-        r_same = net.decoder(c_feat, c_emb)
-        r_diff = net.decoder(c_feat, s_emb)
-        q_same = r_same + net.postnet(r_same)
-        q_diff = r_diff + net.postnet(r_diff)
+    speaker_indices = np.arange(num_speakers)
+    speech_indices  = np.zeros(num_speakers, dtype=np.int)
+    data = dataset.load_data(speaker_indices, speech_indices)
 
-    audio.save(f'0_source', c[0].squeeze(0))
-    audio.save(f'0_target', t[0].squeeze(0))
-    audio.save(f'{stage_no}_r_source', r_same[0].squeeze(0))
-    audio.save(f'{stage_no}_r_target', r_diff[0].squeeze(0))
-    audio.save(f'{stage_no}_q_source', q_same[0].squeeze(0))
-    audio.save(f'{stage_no}_q_target', q_diff[0].squeeze(0))
+    for i in range(num_speakers):
+        audio.save(f'org/{i + 1:03d}', data[i].squeeze(1))
+
+    random_order  = np.random.permutation(num_speakers**2)
+    inverse_order = np.argsort(random_order)
+
+    convert_pairs = np.array(list(itertools.product(speaker_indices, speaker_indices)))
+    convert_pairs = convert_pairs[random_order]
+
+    mat = []
+
+    for i in range(math.ceil(len(convert_pairs) / g.batch_size)):
+        indices = (np.arange(g.batch_size) + i * g.batch_size) % len(convert_pairs)
+        c_speaker_indices = convert_pairs[indices][:, 0]
+        s_speaker_indices = convert_pairs[indices][:, 1]
+        speech_indices = np.zeros(g.batch_size, dtype=np.int)
+
+        c = dataset.load_data(c_speaker_indices, speech_indices)
+        c_emb  = dataset.load_emb(c_speaker_indices)
+        s_emb  = dataset.load_emb(s_speaker_indices)
+
+        c = c.to(g.device)
+        c_emb = c_emb.to(g.device); s_emb = s_emb.to(g.device)
+
+        with torch.no_grad():
+            c_feat = net.content_enc(c, c_emb)
+            r = net.decoder(c_feat, c_emb)
+            q = r + net.postnet(r)
+
+        mat.append(q.squeeze(1))
+
+    mat = torch.cat(mat, dim=0)
+    mat = mat[inverse_order]
+
+    for i, (c, s) in enumerate(convert_pairs):
+        audio.save(f'stage{stage_no}/{c + 1:03d}to{s + 1:03d}', mat[i])
 
 
 if __name__ == '__main__':

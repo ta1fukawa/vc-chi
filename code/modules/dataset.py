@@ -47,8 +47,6 @@ class MelDataset(torch.utils.data.Dataset):
                 s_speaker_indices = self.rand_state.choice(len(self.files),    g.batch_size, replace=True)
                 c_speech_indices  = self.rand_state.choice(len(self.files[0]), g.batch_size, replace=True)
 
-                # s_speaker_indices = torch.zeros_like(s_speaker_indices) ###
-
                 c_data = self.load_data(c_speaker_indices, c_speech_indices)
                 t_data = self.load_data(s_speaker_indices, c_speech_indices)
                 c_emb  = self.load_emb(c_speaker_indices)
@@ -85,7 +83,7 @@ class MelDataset(torch.utils.data.Dataset):
         elif self.embed_type == 'zero':
             emb = torch.zeros_like(emb)
         elif self.embed_type == 'label':
-            emb = speaker_indices.unsqueeze(1).expand(-1, emb.shape[1])
+            emb = torch.from_numpy(speaker_indices).unsqueeze(1).expand(-1, emb.shape[1])
         else:
             raise ValueError('Unknown embed type')
 
