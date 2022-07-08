@@ -63,7 +63,7 @@ def main(config_path, note):
         total_epoch = 0
 
         for stage_no, stage in enumerate(g.stages):
-            logging.info(f'STAGE: {stage}')
+            logging.info(f'STAGE_{stage_no}: {stage}')
             common.update_note_status(f'stage_{stage_no}')
 
             if stage['optimizer'] == 'adam':
@@ -72,9 +72,8 @@ def main(config_path, note):
                 optimizer = torch.optim.SGD(net.parameters(), lr=stage['lr'], momentum=stage['momentum'])
             logging.debug(f'SET OPTIMIZER: {optimizer}')
 
-            train_dataset.set_embed_type(stage['embed_type'])
-            valdt_dataset.set_embed_type(stage['embed_type'])
-            tests_dataset.set_embed_type(stage['embed_type'])
+            for dataset in [train_dataset, valdt_dataset, tests_dataset]:
+                dataset.set_use_zero_emb(stage['use_zero_emb'])
 
             patience = 0
 
@@ -124,11 +123,13 @@ def main(config_path, note):
 
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, SAME TEST LOSS: {tests_loss_same["loss"]:.6f}, DIFF TEST LOSS: {tests_loss_diff["loss"]:.6f}')
 
-            predict(net, stage_no, stage['embed_type'])
+            predict(net, stage_no)
     
     if len(g.stages) == 0:
         logging.info(f'NO STAGE')
-        predict(net, 0, 'label') ###
+        predict(net, 0) ###
+
+    logging.info(f'DONE: {g.code_id}/{g.run_id}')
 
 
 def model_train(net, dataset, criterion, optimizer):
@@ -232,10 +233,10 @@ def model_test(net, dataset, criterion, use_same_speaker):
     return avg_losses
 
 
-def predict(net, stage_no, embed_type):
+def predict(net, stage_no):
     net.eval()
 
-    dataset = ds.MelDataset(0, speaker_end=g.pred_num_speakers, speech_end=g.batch_size, embed_type=embed_type)
+    dataset = ds.MelDataset(0, speaker_end=g.pred_num_speakers, speech_start=-g.batch_size)
 
     speaker_indices = np.arange(g.pred_num_speakers)
     speech_indices  = np.zeros(g.pred_num_speakers, dtype=np.int)
@@ -257,8 +258,8 @@ def predict(net, stage_no, embed_type):
 
             c = dataset.load_data(c_speaker_indices, speech_indices)
             t = dataset.load_data(s_speaker_indices, speech_indices)
-            c_emb  = dataset.load_emb(c_speaker_indices)
-            s_emb  = dataset.load_emb(s_speaker_indices)
+            c_emb = dataset.load_emb(c_speaker_indices)
+            s_emb = dataset.load_emb(s_speaker_indices)
 
             c = c.to(g.device); t = t.to(g.device)
             c_emb = c_emb.to(g.device); s_emb = s_emb.to(g.device)
@@ -268,7 +269,7 @@ def predict(net, stage_no, embed_type):
                 r = net.decoder(c_feat, s_emb)
                 q = r + net.postnet(r)
 
-            mse_loss = torch.nn.functional.mse_loss(q, t)
+            mse_loss = torch.nn.functional.mse_loss(q[:1], t[:1])
             mse_mat[i, j] = mse_loss.item()
 
             audio.save(f'stage{stage_no}/{i + 1:03d}to{j + 1:03d}', q.squeeze(1)[0])

@@ -11,7 +11,7 @@ from modules import global_value as g
 
 
 class MelDataset(torch.utils.data.Dataset):
-    def __init__(self, num_repeats, speaker_start=None, speaker_end=None, speech_start=None, speech_end=None, embed_type='emb'):
+    def __init__(self, num_repeats, speaker_start=None, speaker_end=None, speech_start=None, speech_end=None):
         self.use_same_speaker = g.use_same_speaker
         self.num_repeats = num_repeats
 
@@ -27,7 +27,7 @@ class MelDataset(torch.utils.data.Dataset):
             self.files.append(speeches)
 
         self.set_seed(0)
-        self.set_embed_type(embed_type)
+        self.set_use_zero_emb(False)
 
     def __iter__(self):
         for _ in range(self.num_repeats):
@@ -61,8 +61,8 @@ class MelDataset(torch.utils.data.Dataset):
     def set_seed(self, seed=0):
         self.rand_state = np.random.RandomState(seed)
 
-    def set_embed_type(self, embed_type):
-        self.embed_type = embed_type
+    def set_use_zero_emb(self, use_zero_emb):
+        self.use_zero_emb = use_zero_emb
 
     def load_data(self, speaker_indices, speech_indices):
         data = torch.stack([
@@ -78,14 +78,13 @@ class MelDataset(torch.utils.data.Dataset):
             for speaker_index in speaker_indices
         ], dim=0)
 
-        if self.embed_type == 'emb':
-            pass
-        elif self.embed_type == 'zero':
+        if self.use_zero_emb:
             emb = torch.zeros_like(emb)
-        elif self.embed_type == 'label':
-            emb = torch.from_numpy(speaker_indices).unsqueeze(1).expand(-1, emb.shape[1])
         else:
-            raise ValueError('Unknown embed type')
+            if g.embed_type == 'emb':
+                pass
+            elif g.embed_type == 'label':
+                emb = torch.from_numpy(speaker_indices).unsqueeze(1).expand(-1, emb.shape[1])
 
         return emb
 

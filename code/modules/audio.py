@@ -105,7 +105,7 @@ def save_mel_img(mel, path, vmin=-10, vmax=2):
     plt.close()
 
 
-def save(name, mel=None, wave=None, vmin=-10, vmax=2, ext='pt'):
+def save(name, mel=None, wave=None, vmin=-10, vmax=2, ext='pt', image_ext='png'):
     assert mel is not None or wave is not None
 
     if mel is None:
@@ -117,7 +117,7 @@ def save(name, mel=None, wave=None, vmin=-10, vmax=2, ext='pt'):
     mel_data_path.parent.mkdir(parents=True, exist_ok=True)
     save_mel_data(mel, mel_data_path)
 
-    mel_img_path = g.work_dir / 'img' / f'{name}.png'
+    mel_img_path = g.work_dir / 'img' / f'{name}.{image_ext}'
     mel_img_path.parent.mkdir(parents=True, exist_ok=True)
     save_mel_img(mel, mel_img_path, vmin=vmin, vmax=vmax)
 
