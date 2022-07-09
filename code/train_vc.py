@@ -246,8 +246,8 @@ def predict(net, stage_no):
     for i in range(g.pred_num_speakers):
         audio.save(f'org/{i + 1:03d}', data[i].squeeze(1))
 
-    c_speaker_indices = np.arange(g.batch_size) % g.pred_num_speakers
-    s_speaker_indices = np.arange(g.batch_size) % g.pred_num_speakers
+    c_speaker_indices = g.speaker_start + np.arange(g.batch_size) % (g.speaker_end - g.speaker_start)
+    s_speaker_indices = g.speaker_start + np.arange(g.batch_size) % (g.speaker_end - g.speaker_start)
     speech_indices = np.arange(g.batch_size)
 
     mse_mat = np.zeros((g.pred_num_speakers, g.pred_num_speakers))
