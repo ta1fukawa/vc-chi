@@ -64,3 +64,38 @@ class Layer(torch.nn.Module):
             x = self.bn(x)
         x = self.activation(x)
         return x
+
+class TDNN(torch.nn.Module):
+    def __init__(self, inp, oup, context_size=5, stride=1, dilation=1, dropout_p=0.2, batch_norm=False):
+        super().__init__()
+        self.context_size = context_size
+        self.stride = stride
+        self.input_dim = inp
+        self.output_dim = oup
+        self.dilation = dilation
+        self.dropout_p = dropout_p
+        self.batch_norm = batch_norm
+
+        self.kernel = torch.nn.Linear(inp * context_size, oup)
+        self.activation = torch.nn.ReLU()
+
+        if self.dropout_p > 0:
+            self.dropout = torch.nn.Dropout(self.dropout_p)
+        if self.batch_norm:
+            self.bn = torch.nn.BatchNorm1d(oup)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = x.unsqueeze(1)
+        x = torch.nn.functional.unfold(x, kernel_size=(self.context_size, self.input_dim), stride=(1, self.input_dim), dilation=(self.dilation, 1))
+        x = x.transpose(1, 2)
+        x = self.kernel(x)
+        x = self.activation(x)
+
+        if self.dropout_p > 0:
+            x = self.dropout(x)
+        if self.batch_norm:
+            x = x.transpose(1, 2)
+            x = self.bn(x)
+            x = x.transpose(1, 2)
+
+        return x

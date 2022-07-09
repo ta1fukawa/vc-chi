@@ -37,8 +37,9 @@ def load_wav(path):
     if sr != g.sample_rate:
         wave = librosa.resample(wave, sr, g.sample_rate)
 
-    # wave = np.clip(wave, -1., 1.)
-    # wave = _low_cut_filter(wave, g.highpass_cutoff)
+    if g.highpass_cutoff is not None:
+        wave = np.clip(wave, -1., 1.)
+        wave = _low_cut_filter(wave, g.highpass_cutoff)
 
     wave = wave / np.max(np.abs(wave))
 
@@ -54,6 +55,20 @@ def load_wav(path):
 def save_wav_file(wave, path):
     path.parent.mkdir(parents=True, exist_ok=True)
     sf.write(path, wave, g.sample_rate)
+
+
+def save_wave_img(wave, path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    if type(wave) == torch.Tensor:
+        wave = wave.detach().cpu().numpy()
+
+    plt.figure(figsize=(10, 6))
+    plt.subplots_adjust(left=0.1, right=0.95, bottom=0.1, top=0.95)
+    plt.ylim(-1, 1)
+    plt.plot(wave, color='magenta', linewidth=0.5, alpha=0.5)
+    plt.savefig(path)
+    plt.close()
 
 
 def _low_cut_filter(wave, cutoff):
@@ -113,11 +128,11 @@ def save(name, mel=None, wave=None, vmin=-10, vmax=2, ext='pt', image_ext='png')
     if type(mel) == torch.Tensor:
         mel = mel.detach().cpu().numpy()
 
-    mel_data_path = g.work_dir / 'mel' / f'{name}.{ext}'
+    mel_data_path = g.work_dir / 'mel_data' / f'{name}.{ext}'
     mel_data_path.parent.mkdir(parents=True, exist_ok=True)
     save_mel_data(mel, mel_data_path)
 
-    mel_img_path = g.work_dir / 'img' / f'{name}.{image_ext}'
+    mel_img_path = g.work_dir / 'mel_img' / f'{name}.{image_ext}'
     mel_img_path.parent.mkdir(parents=True, exist_ok=True)
     save_mel_img(mel, mel_img_path, vmin=vmin, vmax=vmax)
 
@@ -130,6 +145,10 @@ def save(name, mel=None, wave=None, vmin=-10, vmax=2, ext='pt', image_ext='png')
     wav_file_path = g.work_dir / 'wav' / f'{name}.wav'
     wav_file_path.parent.mkdir(parents=True, exist_ok=True)
     save_wav_file(wave, wav_file_path)
+
+    wave_img_path = g.work_dir / 'wave_img' / f'{name}.{image_ext}'
+    wave_img_path.parent.mkdir(parents=True, exist_ok=True)
+    save_wave_img(wave, wave_img_path)
 
 
 g._mel_basis = None

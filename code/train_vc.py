@@ -123,13 +123,14 @@ def main(config_path, note):
 
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, SAME TEST LOSS: {tests_loss_same["loss"]:.6f}, DIFF TEST LOSS: {tests_loss_diff["loss"]:.6f}')
 
-            predict(net, stage_no)
-    
-    if len(g.stages) == 0:
-        logging.info(f'NO STAGE')
-        predict(net, 0) ###
+            # predict(net, stage_no)
 
-    logging.info(f'DONE: {g.code_id}/{g.run_id}')
+    # if len(g.stages) == 0:
+    #     logging.info(f'NO STAGE')
+    #     predict(net, 0) ###
+    predict(net, 0)
+
+    logging.info(f'DONE: {g.code_id}/{g.run_id} {note}')
 
 
 def model_train(net, dataset, criterion, optimizer):
