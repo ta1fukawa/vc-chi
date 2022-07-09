@@ -123,12 +123,7 @@ def main(config_path, note):
 
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, SAME TEST LOSS: {tests_loss_same["loss"]:.6f}, DIFF TEST LOSS: {tests_loss_diff["loss"]:.6f}')
 
-            # predict(net, stage_no)
-
-    # if len(g.stages) == 0:
-    #     logging.info(f'NO STAGE')
-    #     predict(net, 0) ###
-    predict(net, 0)
+    predict(net)
 
     logging.info(f'DONE: {g.code_id}/{g.run_id} {note}')
 
@@ -234,10 +229,10 @@ def model_test(net, dataset, criterion, use_same_speaker):
     return avg_losses
 
 
-def predict(net, stage_no):
+def predict(net):
     net.eval()
 
-    dataset = ds.MelDataset(0, speaker_end=g.pred_num_speakers, speech_start=-g.batch_size)
+    dataset = ds.MelDataset(0, speaker_start=0, speaker_end=g.pred_num_speakers, speech_start=-g.batch_size)
 
     speaker_indices = np.arange(g.pred_num_speakers)
     speech_indices  = np.zeros(g.pred_num_speakers, dtype=np.int)
@@ -273,9 +268,9 @@ def predict(net, stage_no):
             mse_loss = torch.nn.functional.mse_loss(q[:1], t[:1])
             mse_mat[i, j] = mse_loss.item()
 
-            audio.save(f'stage{stage_no}/{i + 1:03d}to{j + 1:03d}', q.squeeze(1)[0])
+            audio.save(f'{i + 1:03d}to{j + 1:03d}', q.squeeze(1)[0])
 
-    with open(g.work_dir / f'stage{stage_no}_mse_mat.csv', 'w') as f:
+    with open(g.work_dir / f'mse_mat.csv', 'w') as f:
         writer = csv.writer(f)
         writer.writerows(mse_mat)
 

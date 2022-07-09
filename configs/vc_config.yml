@@ -12,9 +12,9 @@ log_interval : 100
 batch_size   : 8
 embed_type: 'emb'
 
-speaker_start : 4
-speaker_end   : 8
-pred_num_speakers : 8
+speaker_start : 0
+speaker_end   : 2
+pred_num_speakers : 100
 
 stages:
 - optimizer  : 'adam'
@@ -31,7 +31,7 @@ stages:
   lr         : 1.e-3
   momentum   : 0.9
   num_epochs : 400
-  patience   : 40
+  patience   : 20
   use_zero_emb: false
 
 vgg_weight  : 0

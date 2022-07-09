@@ -11,12 +11,15 @@ from modules import global_value as g
 
 
 class MelDataset(torch.utils.data.Dataset):
-    def __init__(self, num_repeats, speech_start=None, speech_end=None):
+    def __init__(self, num_repeats, speaker_start=None, speaker_end=None, speech_start=None, speech_end=None):
         self.use_same_speaker = g.use_same_speaker
         self.num_repeats = num_repeats
 
+        speaker_start = g.speaker_start if speaker_start is None else speaker_start
+        speaker_end   = g.speaker_end   if speaker_end   is None else speaker_end
+
         speakers = sorted(pathlib.Path(g.mel_dir).iterdir())
-        speakers = speakers[g.speaker_start:g.speaker_end]
+        speakers = speakers[speaker_start:speaker_end]
         self.speakers = speakers
 
         self.files = []
