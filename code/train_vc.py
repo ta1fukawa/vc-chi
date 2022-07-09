@@ -232,7 +232,7 @@ def model_test(net, dataset, criterion, use_same_speaker):
 def predict(net):
     net.eval()
 
-    dataset = ds.MelDataset(0, speaker_start=0, speaker_end=g.pred_num_speakers, speech_start=-g.batch_size)
+    dataset = ds.MelDataset(0, speaker_start=0, speaker_end=12, speech_start=-g.batch_size)
 
     speaker_indices = np.arange(g.pred_num_speakers)
     speech_indices  = np.zeros(g.pred_num_speakers, dtype=np.int)
