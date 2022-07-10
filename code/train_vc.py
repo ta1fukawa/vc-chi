@@ -249,8 +249,8 @@ def predict(net):
 
     target_speakers = np.concatenate((np.arange(g.pred_num_speakers // 2), (len(dataset.files) - g.pred_num_speakers // 2 + np.arange(g.pred_num_speakers // 2))))
 
-    for i in range(target_speakers):
-        for j in range(target_speakers):
+    for i in range(g.pred_num_speakers):
+        for j in range(g.pred_num_speakers):
             c_speaker_indices[0] = target_speakers[i]
             s_speaker_indices[0] = target_speakers[j]
 
