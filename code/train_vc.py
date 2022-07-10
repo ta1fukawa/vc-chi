@@ -26,9 +26,9 @@ def main(config_path, note):
         net.load_state_dict(torch.load(g.model_load_path, map_location=g.device))
         logging.debug(f'LOAD MODEL: {g.model_load_path}')
 
-    train_dataset = ds.MelDataset(**g.train_dataset)
-    valdt_dataset = ds.MelDataset(**g.valdt_dataset)
-    tests_dataset = ds.MelDataset(**g.tests_dataset)
+    train_dataset = ds.MelDataset(**g.train_dataset, speaker_size=g.speaker_size)
+    valdt_dataset = ds.MelDataset(**g.valdt_dataset, speaker_size=g.speaker_size)
+    tests_dataset = ds.MelDataset(**g.tests_dataset, speaker_size=g.speaker_size)
 
     vgg_criterion = vgg_perceptual_loss.VGGPerceptualLoss().to(g.device)
     sim_criterion = ssim_loss.SSIMLoss(channel=1).to(g.device)
@@ -232,7 +232,7 @@ def model_test(net, dataset, criterion, use_same_speaker):
 def predict(net):
     net.eval()
 
-    dataset = ds.MelDataset(0, speaker_start=0, speaker_end=min(g.speaker_start + g.batch_size, g.speaker_end), speech_start=-g.batch_size)
+    dataset = ds.MelDataset(0, speaker_size=None, speech_start=-g.batch_size)
 
     speaker_indices = np.arange(g.pred_num_speakers)
     speech_indices  = np.zeros(g.pred_num_speakers, dtype=np.int)
@@ -241,16 +241,18 @@ def predict(net):
     for i in range(g.pred_num_speakers):
         audio.save(f'org/{i + 1:03d}', data[i].squeeze(1))
 
-    c_speaker_indices = g.speaker_start + np.arange(g.batch_size) % (g.speaker_end - g.speaker_start)
-    s_speaker_indices = g.speaker_start + np.arange(g.batch_size) % (g.speaker_end - g.speaker_start)
+    c_speaker_indices = np.arange(g.batch_size) % g.speaker_size
+    s_speaker_indices = np.arange(g.batch_size) % g.speaker_size
     speech_indices = np.arange(g.batch_size)
 
     mse_mat = np.zeros((g.pred_num_speakers, g.pred_num_speakers))
 
-    for i in range(g.pred_num_speakers):
-        for j in range(g.pred_num_speakers):
-            c_speaker_indices[0] = i
-            s_speaker_indices[0] = j
+    target_speakers = np.concatenate((np.arange(g.pred_num_speakers // 2), (len(dataset.files) - g.pred_num_speakers // 2 + np.arange(g.pred_num_speakers // 2))))
+
+    for i in range(target_speakers):
+        for j in range(target_speakers):
+            c_speaker_indices[0] = target_speakers[i]
+            s_speaker_indices[0] = target_speakers[j]
 
             c = dataset.load_data(c_speaker_indices, speech_indices)
             t = dataset.load_data(s_speaker_indices, speech_indices)
