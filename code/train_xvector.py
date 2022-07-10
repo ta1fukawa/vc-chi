@@ -285,7 +285,7 @@ def predict(net):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config_path', type=pathlib.Path, default='./configs/xvector_config.yml')
+    parser.add_argument('-c', '--config_path', type=pathlib.Path, default='./xvector_config.yml')
     parser.add_argument('-n', '--note', type=str, default=None)
 
     try:

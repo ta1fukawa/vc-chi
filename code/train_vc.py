@@ -279,7 +279,7 @@ def predict(net):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_path', type=pathlib.Path, default='./configs/vc_config.yml')
+    parser.add_argument('--config_path', type=pathlib.Path, default='./vc_config.yml')
     parser.add_argument('-n', '--note', type=str, default=None)
 
     try:
