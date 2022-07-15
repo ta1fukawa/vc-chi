@@ -1,18 +1,18 @@
 # Root
 use_same_speaker : false
-model_load_path  : null
+model_load_path  : null #'./dest/train_vc/202207/11/173131/cp/0_best_valdt.pth'
 
 # X-Vector
-emb_dir : './dest/train_xvector/20220709/155833/emb'
+emb_dir : './dest/_archive/embedding/pca/20220709_155833/64'
 xvec_model_path  : './dest/train_xvector/20220709/155833/cp/0_best_valdt.pth'
-style_dim : 512
+style_dim : 64
 
 # ML
 log_interval : 100
 batch_size   : 8
 embed_type: 'emb'
 
-speaker_size : 2
+speaker_size : 64
 pred_num_speakers : 8
 
 stages:
@@ -21,17 +21,20 @@ stages:
   num_epochs : 200
   patience   : 20
   use_zero_emb: true
+  disabled   : false
 - optimizer  : 'adam'
   lr         : 1.e-3
   num_epochs : 200
   patience   : 20
   use_zero_emb: false
+  disabled   : false
 - optimizer  : 'sgd'
   lr         : 1.e-3
   momentum   : 0.9
   num_epochs : 400
   patience   : 20
   use_zero_emb: false
+  disabled   : false
 
 vgg_weight  : 0
 sim_weight : 0

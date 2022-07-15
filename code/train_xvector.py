@@ -59,6 +59,10 @@ def main(config_path, note):
             logging.info(f'STAGE: {stage}')
             common.update_note_status(f'stage_{stage_no}')
 
+            if stage['disabled']:
+                logging.info(f'STAGE_{stage_no} is disabled')
+                continue
+
             net.set_cassifier(stage['speaker_size'])
             logging.debug(f'MODEL: {net}')
 
@@ -73,9 +77,9 @@ def main(config_path, note):
                 optimizer = torch.optim.SGD(parameters, lr=stage['lr'], momentum=stage['momentum'])
             logging.debug(f'SET OPTIMIZER: {optimizer}')
 
-            train_dataset = ds.PnmDataset(stage['speaker_size'], **g.train_dataset)
-            valdt_dataset = ds.PnmDataset(stage['speaker_size'], **g.valdt_dataset)
-            tests_dataset = ds.PnmDataset(stage['speaker_size'], **g.tests_dataset)
+            train_dataset = ds.PnmDataset(**g.train_dataset, speaker_size=stage['speaker_size'])
+            valdt_dataset = ds.PnmDataset(**g.valdt_dataset, speaker_size=stage['speaker_size'])
+            tests_dataset = ds.PnmDataset(**g.tests_dataset, speaker_size=stage['speaker_size'])
 
             patience = 0
 
@@ -230,6 +234,7 @@ def predict(net):
 
     emb_dir.mkdir(parents=True, exist_ok=True)
 
+    embs = []
     embs_left = []; embs_right = []
     for speaker in sorted(wav_dir.iterdir()):
         if not speaker.is_dir():
@@ -251,11 +256,16 @@ def predict(net):
         speaker_emb = torch.mean(speaker_embs, dim=0).cpu()
         torch.save(speaker_emb, str(emb_dir / f'{speaker.name}.pt'))
 
+        embs.append(speaker_emb)
+
         emb_left  = torch.mean(speaker_embs[:speaker_embs.shape[0] // 2], dim=0).cpu()
         emb_right = torch.mean(speaker_embs[speaker_embs.shape[0] // 2:], dim=0).cpu()
 
         embs_left.append(emb_left)
         embs_right.append(emb_right)
+
+    embs = torch.stack(embs, dim=0)
+    torch.save(embs, g.work_dir / 'embs.pt')
 
     cos_sim_mat = torch.empty((len(embs_left), len(embs_right)))
     vec_dis_mat = torch.empty((len(embs_left), len(embs_right)))

@@ -66,6 +66,10 @@ def main(config_path, note):
             logging.info(f'STAGE_{stage_no}: {stage}')
             common.update_note_status(f'stage_{stage_no}')
 
+            if stage['disabled']:
+                logging.info(f'STAGE_{stage_no} is disabled')
+                continue
+
             if stage['optimizer'] == 'adam':
                 optimizer = torch.optim.Adam(net.parameters(), lr=stage['lr'])
             elif stage['optimizer'] == 'sgd':

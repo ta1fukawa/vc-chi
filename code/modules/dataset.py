@@ -84,27 +84,67 @@ class MelDataset(torch.utils.data.Dataset):
             if g.embed_type == 'emb':
                 pass
             elif g.embed_type == 'label':
-                emb = torch.from_numpy(speaker_indices).unsqueeze(1).expand(-1, emb.shape[1])
+                emb = torch.from_numpy(speaker_indices).unsqueeze(1).expand(-1, g.style_dim)
+            elif g.embed_type == 'onehot':
+                emb = torch.nn.functional.one_hot(torch.from_numpy(speaker_indices), num_classes=g.style_dim)
 
         return emb
 
 
+class MelDatasetWithNoEmb(torch.utils.data.Dataset):
+    def __init__(self, num_repeats, speaker_size=None, speech_start=None, speech_end=None):
+        self.num_repeats = num_repeats
+
+        speakers = sorted(pathlib.Path(g.mel_dir).iterdir())
+        speakers = speakers[:speaker_size]
+        self.speakers = speakers
+
+        self.files = []
+        for speaker in speakers:
+            speeches = sorted(speaker.iterdir())
+            speeches = speeches[speech_start:speech_end]
+
+            self.files.append(speeches)
+
+        self.set_seed(0)
+
+    def __iter__(self):
+        for _ in range(self.num_repeats):
+            speaker_indices = self.rand_state.choice(len(self.files),    g.batch_size, replace=True)
+            speech_indices  = self.rand_state.choice(len(self.files[0]), g.batch_size, replace=True)
+
+            data = self.load_data(speaker_indices, speech_indices)
+
+            speaker_indices = torch.from_numpy(speaker_indices).long()
+            speech_indices  = torch.from_numpy(speech_indices) .long()
+
+            yield data, (speaker_indices, speech_indices)
+
+    def set_seed(self, seed=0):
+        self.rand_state = np.random.RandomState(seed)
+
+    def load_data(self, speaker_indices, speech_indices):
+        data = torch.stack([
+            padding(torch.load(self.files[speaker_index][speech_index]), g.seg_len)
+            for speaker_index, speech_index in zip(speaker_indices, speech_indices)
+        ], dim=0)
+
+        return data
+
+
 class PnmDataset(torch.utils.data.Dataset):
-    def __init__(self, speaker_size, num_repeats, phoneme_start=None, phoneme_end=None):
+    def __init__(self, num_repeats, speaker_size=None, phoneme_start=None, phoneme_end=None):
         self.num_repeats = num_repeats
 
         speakers = sorted(pathlib.Path(g.wav_dir).iterdir())
-        speakers = speakers[:speaker_size]
 
         self.waves = []
         for speaker in speakers:
             speaker_waves = load_speaker_waves(speaker, phoneme_start, phoneme_end)
             if speaker_waves is not None:
                 self.waves.append(speaker_waves)
-                if len(self.waves) >= speaker_size:
+                if speaker_size is not None and len(self.waves) >= speaker_size:
                     break
-        else:
-            raise ValueError('Speaker size is too large.')
 
         self.set_seed(0)
 

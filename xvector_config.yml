@@ -13,6 +13,7 @@ stages:
   patience   : 20
   speaker_size  : 64
   only_classifier: false
+  disabled   : false
 
 # Dataset (based on past papers)
 train_dataset:
