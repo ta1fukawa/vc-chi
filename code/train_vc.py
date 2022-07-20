@@ -239,7 +239,7 @@ def predict(net):
     dataset = ds.MelDataset(0, speaker_size=None, speech_start=-g.batch_size)
 
     speaker_indices = np.arange(g.pred_num_speakers)
-    speech_indices  = np.zeros(g.pred_num_speakers, dtype=np.int)
+    speech_indices  = np.zeros(g.pred_num_speakers, dtype=int)
     data = dataset.load_data(speaker_indices, speech_indices)
 
     for i in range(g.pred_num_speakers):

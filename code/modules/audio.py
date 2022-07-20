@@ -245,6 +245,7 @@ def mel2wave_melgan(mel):
 
     return wave
 
+
 g._stft_window = None
 def fast_stft(wave):
     if g._stft_window is None:

@@ -5,7 +5,7 @@ import sys
 import numpy as np
 import torch
 
-sys.path.append('test/deep-speaker/')
+sys.path.append('code/deep-speaker/')
 
 from conv_models import DeepSpeakerModel
 from audio import read_mfcc
@@ -15,10 +15,10 @@ from test_ import batch_cosine_similarity
 
 model = DeepSpeakerModel()
 model.m.load_weights(
-    "./model/deep-speaker/ResCNN_triplet_training_checkpoint_265.h5", by_name=True
+    "./model/deep-speaker/ResCNN_pre-zero.h5", by_name=True
 )
 
-work_dir = pathlib.Path('./dest/_archive/emb_philipperemy')
+work_dir = pathlib.Path('./dest/_archive/emb_rescnn/pre_zero')
 wav_dir = pathlib.Path('./dataset/jvs_ver1/wav_all')
 emb_dir = work_dir / 'emb'
 

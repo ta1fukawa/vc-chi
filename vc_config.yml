@@ -1,11 +1,11 @@
 # Root
 use_same_speaker : false
-model_load_path  : null #'./dest/train_vc/202207/11/173131/cp/0_best_valdt.pth'
+model_load_path  : null
 
 # X-Vector
-emb_dir : './dest/_archive/embedding/pca/20220709_155833/64'
+emb_dir : './dest/_archive/emb_rescnn/zero_zero/emb'
 xvec_model_path  : './dest/train_xvector/20220709/155833/cp/0_best_valdt.pth'
-style_dim : 64
+style_dim : 512
 
 # ML
 log_interval : 100
