@@ -41,10 +41,13 @@ class ContentEncoder(torch.nn.Module):
 
         self.lstm.flatten_parameters()
         x, _ = self.lstm(x)
-        code = torch.cat([
-            x[:, g.lstm_stride - 1::g.lstm_stride, :g.dim_neck],
-            x[:, :-g.lstm_stride + 1:g.lstm_stride, g.dim_neck:]
-        ], dim=-1)
+        if g.lstm_stride > 1:
+            code = torch.cat([
+                x[:, g.lstm_stride - 1::g.lstm_stride, :g.dim_neck],
+                x[:, :-g.lstm_stride + 1:g.lstm_stride, g.dim_neck:]
+            ], dim=-1)
+        else:
+            code = torch.cat([x[:, :, :g.dim_neck], x[:, :, g.dim_neck:]], dim=-1)
         x = code.repeat_interleave(c.size(1) // code.size(1), dim=1)
 
         return x

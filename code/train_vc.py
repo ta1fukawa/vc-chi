@@ -66,18 +66,26 @@ def main(config_path, note):
             logging.info(f'STAGE_{stage_no}: {stage}')
             common.update_note_status(f'stage_{stage_no}')
 
-            if stage['disabled']:
+            if 'disabled' in stage and stage['disabled']:
                 logging.info(f'STAGE_{stage_no} is disabled')
                 continue
 
+            if 'train_target' in stage:
+                parameters = list(itertools.chain.from_iterable([
+                    list(getattr(net, target).parameters()) for target in stage['train_target']
+                ]))
+            else:
+                parameters = list(net.parameters())
+
             if stage['optimizer'] == 'adam':
-                optimizer = torch.optim.Adam(net.parameters(), lr=stage['lr'])
+                optimizer = torch.optim.Adam(parameters, lr=stage['lr'])
             elif stage['optimizer'] == 'sgd':
-                optimizer = torch.optim.SGD(net.parameters(), lr=stage['lr'], momentum=stage['momentum'])
+                optimizer = torch.optim.SGD(parameters, lr=stage['lr'], momentum=stage['momentum'])
             logging.debug(f'SET OPTIMIZER: {optimizer}')
 
             for dataset in [train_dataset, valdt_dataset, tests_dataset]:
-                dataset.set_use_zero_emb(stage['use_zero_emb'])
+                dataset.set_use_same_speaker(stage['use_same_speaker'] if 'use_same_speaker' in stage else g.use_same_speaker)
+                dataset.set_use_zero_emb    (stage['use_zero_emb']     if 'use_zero_emb'     in stage else g.use_zero_emb    )
 
             patience = 0
 
@@ -127,7 +135,7 @@ def main(config_path, note):
 
             logging.info(f'BEST TRAIN LOSS: {best_train_loss["loss"]:.6f}, BEST VALDT LOSS: {best_valdt_loss["loss"]:.6f}, SAME TEST LOSS: {tests_loss_same["loss"]:.6f}, DIFF TEST LOSS: {tests_loss_diff["loss"]:.6f}')
 
-    predict(net)
+            predict(net, stage_no)
 
     logging.info(f'DONE: {g.code_id}/{g.run_id} {note}')
 
@@ -233,7 +241,7 @@ def model_test(net, dataset, criterion, use_same_speaker):
     return avg_losses
 
 
-def predict(net):
+def predict(net, stage_no):
     net.eval()
 
     dataset = ds.MelDataset(0, speaker_size=None, speech_start=-g.batch_size)
@@ -243,7 +251,7 @@ def predict(net):
     data = dataset.load_data(speaker_indices, speech_indices)
 
     for i in range(g.pred_num_speakers):
-        audio.save(f'org/{i + 1:03d}', data[i].squeeze(1))
+        audio.save(f'stage{stage_no}/org/{i + 1:03d}', data[i].squeeze(1))
 
     c_speaker_indices = np.arange(g.batch_size) % g.speaker_size
     s_speaker_indices = np.arange(g.batch_size) % g.speaker_size
@@ -276,7 +284,8 @@ def predict(net):
 
             audio.save(f'{i + 1:03d}to{j + 1:03d}', q.squeeze(1)[0])
 
-    with open(g.work_dir / f'mse_mat.csv', 'w') as f:
+    (g.work_dir / f'csv/stage{stage_no}').mkdir(parents=True, exist_ok=True)
+    with open(g.work_dir / f'csv/stage{stage_no}/mse_mat.csv', 'w') as f:
         writer = csv.writer(f)
         writer.writerows(mse_mat)
 

@@ -5,10 +5,9 @@ import tempfile
 import librosa
 import soundfile as sf
 
-sys.path.append('code/julius4seg')
+sys.path.append('code/modules/julius4seg')
 
 from sample.run_segment import run_segment
-
 from julius4seg.sp_inserter import ModelType
 
 

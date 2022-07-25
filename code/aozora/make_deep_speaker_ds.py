@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import multiprocessing
 
-sys.path.append('code/deep-speaker/')
+sys.path.append('code/modules/deep-speaker/')
 
 from audio import read_mfcc
 from constants import SAMPLE_RATE

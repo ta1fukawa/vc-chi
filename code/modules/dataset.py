@@ -11,8 +11,8 @@ from modules import global_value as g
 
 
 class MelDataset(torch.utils.data.Dataset):
-    def __init__(self, num_repeats, speaker_size=None, speech_start=None, speech_end=None):
-        self.use_same_speaker = g.use_same_speaker
+    def __init__(self, num_repeats, speaker_size=None, speech_start=None, speech_end=None, use_same_speaker=None):
+        self.use_same_speaker = g.use_same_speaker if use_same_speaker is None else use_same_speaker
         self.num_repeats = num_repeats
 
         speakers = sorted(pathlib.Path(g.mel_dir).iterdir())
@@ -60,6 +60,9 @@ class MelDataset(torch.utils.data.Dataset):
 
     def set_seed(self, seed=0):
         self.rand_state = np.random.RandomState(seed)
+
+    def set_use_same_speaker(self, use_same_speaker):
+        self.use_same_speaker = use_same_speaker
 
     def set_use_zero_emb(self, use_zero_emb):
         self.use_zero_emb = use_zero_emb

@@ -1,9 +1,11 @@
 # Root
-use_same_speaker : false
+use_same_speaker : true
+use_zero_emb     : false
 model_load_path  : null
 
 # X-Vector
-emb_dir : './dest/_archive/emb_rescnn/zero_zero/emb'
+emb_dir : './dest/_archive/emb_rescnn/jvs+aozora/pre_fine/emb'
+# emb_dir : './dest/_archive/emb_philipperemy/emb'
 xvec_model_path  : './dest/train_xvector/20220709/155833/cp/0_best_valdt.pth'
 style_dim : 512
 
@@ -20,21 +22,33 @@ stages:
   lr         : 1.e-3
   num_epochs : 200
   patience   : 20
-  use_zero_emb: true
-  disabled   : false
+  use_same_speaker : false
+  use_zero_emb     : true
+  disabled         : false
 - optimizer  : 'adam'
   lr         : 1.e-3
   num_epochs : 200
   patience   : 20
-  use_zero_emb: false
-  disabled   : false
+  use_same_speaker : false
 - optimizer  : 'sgd'
   lr         : 1.e-3
   momentum   : 0.9
   num_epochs : 400
   patience   : 20
-  use_zero_emb: false
-  disabled   : false
+  use_same_speaker : false
+# - optimizer  : 'adam'
+#   lr         : 1.e-3
+#   num_epochs : 200
+#   patience   : 20
+#   use_same_speaker : true
+#   train_target     : ['decoder', 'postnet']
+# - optimizer  : 'sgd'
+#   lr         : 1.e-3
+#   momentum   : 0.9
+#   num_epochs : 400
+#   patience   : 20
+#   use_same_speaker : true
+#   train_target     : ['decoder', 'postnet']
 
 vgg_weight  : 0
 sim_weight : 0

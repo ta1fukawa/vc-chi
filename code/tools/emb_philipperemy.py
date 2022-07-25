@@ -4,8 +4,12 @@ import sys
 
 import numpy as np
 import torch
+import tensorflow as tf
 
-sys.path.append('code/deep-speaker/')
+for device in tf.config.list_physical_devices('GPU'):
+    tf.config.experimental.set_memory_growth(device, True)
+
+sys.path.append('code/modules/deep-speaker/')
 
 from conv_models import DeepSpeakerModel
 from audio import read_mfcc
@@ -15,10 +19,10 @@ from test_ import batch_cosine_similarity
 
 model = DeepSpeakerModel()
 model.m.load_weights(
-    "./model/deep-speaker/ResCNN_pre-zero.h5", by_name=True
+    "./model/deep-speaker/jvs+aozora/ResCNN_pre-fine.h5", by_name=True
 )
 
-work_dir = pathlib.Path('./dest/_archive/emb_rescnn/pre_zero')
+work_dir = pathlib.Path('./dest/_archive/emb_rescnn/jvs+aozora/pre_fine')
 wav_dir = pathlib.Path('./dataset/jvs_ver1/wav_all')
 emb_dir = work_dir / 'emb'
 

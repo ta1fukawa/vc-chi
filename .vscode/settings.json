@@ -1,5 +1,5 @@
 {
-    "python.analysis.extraPaths": ["./code", "./code/julius4seg", "./code/deep-speaker"],
+    "python.analysis.extraPaths": ["./code", "./code/modules/julius4seg", "./code/modules/deep-speaker"],
     "files.watcherExclude": {
         "./archive": true,
         "./dataset": true,

@@ -5,6 +5,8 @@ import zipfile
 import soundfile as sf
 
 
+# RUN: gdown 19oAw8wWn3Y7z6CKChRdAyGOB9yupL_Xt
+
 zip_path = pathlib.Path('./dataset/jvs_ver1.zip')
 
 ## Extract zip file
