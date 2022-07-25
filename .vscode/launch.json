@@ -12,6 +12,11 @@
                 "CUDA_VISIBLE_DEVICES": "3"
             },
             "subProcess": false,
+            "args": [
+                "ja",
+                "dataset/wiki_words/word/ja/jawiki-latest-pages-articles-multistream-index.txt",
+                "--outdir", "dataset/podcastid"
+            ]
         }
     ]
 }

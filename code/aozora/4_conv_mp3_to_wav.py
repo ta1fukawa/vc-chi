@@ -3,7 +3,7 @@ import pathlib
 import subprocess  # for ffmpeg
 
 mp3_dir = pathlib.Path('dataset/aozora/mp3')
-wav_dir = pathlib.Path('dataset/aozorawav')
+wav_dir = pathlib.Path('dataset/aozora/wav')
 
 for mp3_subdir in sorted(mp3_dir.glob('*')):
     wav_subdir = wav_dir / mp3_subdir.name

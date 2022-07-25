@@ -4,8 +4,7 @@ use_zero_emb     : false
 model_load_path  : null
 
 # X-Vector
-emb_dir : './dest/_archive/emb_rescnn/jvs+aozora/pre_fine/emb'
-# emb_dir : './dest/_archive/emb_philipperemy/emb'
+emb_dir : './dest/_archive/emb_philipperemy/emb'
 xvec_model_path  : './dest/train_xvector/20220709/155833/cp/0_best_valdt.pth'
 style_dim : 512
 
