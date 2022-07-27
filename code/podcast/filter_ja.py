@@ -17,7 +17,7 @@ with open(podcasturl_path, 'r') as f:
 print('Podcasts:', len(podcasturls))
 
 count = 0
-with open(podcasturl_ja_path, 'w') as f:
+with open(podcasturl_ja_path, 'a') as f:
     for i, podcasturl in enumerate(podcasturls):
         url = base64decode(podcasturl.strip())
         try:

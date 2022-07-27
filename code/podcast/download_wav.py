@@ -1,21 +1,96 @@
-import requests
-from xml.etree import ElementTree
 import base64
-import subprocess
-import pathlib
 import hashlib
+import os
+import pathlib
+import random
+import shutil
+import subprocess
+import sys
+import warnings
+from contextlib import redirect_stdout
+from xml.etree import ElementTree
 
-podcasturl_path = pathlib.Path('dataset/podcastid/ja.txt')
-# podcasturl_path = pathlib.Path('dataset/podcast/feeds/ja.txt')
+import requests
+
+warnings.simplefilter('ignore', FutureWarning)
+warnings.simplefilter('ignore', RuntimeWarning)
+warnings.simplefilter('ignore', UserWarning)
+
+import inaSpeechSegmenter
+import numpy as np
+import tensorflow as tf
+import torchaudio
+
+for device in tf.config.list_physical_devices('GPU'):
+    tf.config.experimental.set_memory_growth(device, True)
+
+podcasturl_path = pathlib.Path('dataset/podcast/feeds/ja.txt')
 dest_path = pathlib.Path('dataset/podcast/ja')
 
 def base64decode(string):
     return base64.b64decode(string + '=' * (-len(string) % 4)).decode('utf-8')
 
+def download(url, path):
+    res = requests.get(audiourl, timeout=(5.0, 5.0))
+    if res.status_code != 200:
+        return False
+    with open(path, 'wb') as f:
+        f.write(res.content)
+        f.flush()
+    return True
+
+def convert_to_wav24k(src, dst):
+    subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', str(src), '-ar', '24000', '-ac', '1', str(dst)])
+
+min_speech_ratio = 0.80
+max_music_ratio  = 0.0100
+max_noise_mean_level = 0.0100
+
+seg_model = inaSpeechSegmenter.Segmenter(vad_engine='smn', detect_gender=False, batch_duration=1024)
+
+def check_quality(path):
+    with redirect_stdout(open(os.devnull, 'w')):
+        data = seg_model(path)
+
+    wave, sr = torchaudio.load(path)
+    wave /= wave.max()
+    wave = wave.squeeze().numpy()
+
+    speech_duration = 0
+    music_duration  = 0
+    noise_duration  = 0
+    noise_wave = []
+    for state, start, end in data:
+        duration = end - start
+        if state == 'speech':
+            speech_duration += duration
+        elif state == 'music':
+            music_duration += duration
+        elif state == 'noise':
+            noise_duration += duration
+            noise_wave.append(wave[int(start * sr):int(end * sr)])
+
+    full_duration = speech_duration + music_duration + noise_duration
+    speech_ratio = speech_duration / full_duration
+    music_ratio  = music_duration / full_duration
+    noise_mean_level = np.mean(np.abs(np.concatenate(noise_wave))) if noise_wave else -np.inf
+
+    print('    speech_ratio={:.2f}, music_ratio={:.4f}, noise_mean_level={:.4f})'.format(speech_ratio, music_ratio, noise_mean_level))
+
+    if speech_ratio > min_speech_ratio and music_ratio < max_music_ratio and noise_mean_level < max_noise_mean_level:
+        return True
+    else:
+        return False
+
+print()
+
 with open(podcasturl_path, 'r') as f:
     podcasturls = f.readlines()
 
-for podcasturl in sorted(podcasturls)[1000:8686]: ###
+rand_fname = ''.join(random.choice('0123456789abcdef') for _ in range(8))
+j = int(sys.argv[1])
+for i, podcasturl in enumerate(sorted(podcasturls)[j * 2000:(j + 1) * 2000]): ###
+    print(f'[{i + j * 2000}/{len(podcasturls)}] {podcasturl}')
     podcasturl_hash = hashlib.md5(podcasturl.strip().encode()).hexdigest()
 
     try:
@@ -30,36 +105,34 @@ for podcasturl in sorted(podcasturls)[1000:8686]: ###
             try:
                 audiourl = item.find('enclosure').get('url')
                 audiourl_hash = hashlib.md5(audiourl.encode()).hexdigest()
-                audio_path = dest_path / 'audio' / podcasturl_hash / '{name}.{ext}'.format(name=audiourl_hash, ext=audiourl.split('.')[-1])
-                wav24k_path = dest_path / 'wav24k' / podcasturl_hash / '{name}.wav'.format(name=audiourl_hash)
-                if wav24k_path.exists():
-                    break
-                print(audiourl)
 
-                res = requests.get(audiourl, timeout=(5.0, 5.0))
+                audio_path  = pathlib.Path('/tmp', '{fname}.{ext}'.format(fname=rand_fname, ext=audiourl.split('.')[-1]))
+                if download(audiourl, audio_path):
+                    print(f'{audiourl} downloaded.')
+                else:
+                    print(f'{audiourl} download failed.')
+                    continue
+
+                audio24k_path = pathlib.Path('/tmp', '{fname}_24k.wav'.format(fname=rand_fname))
+                convert_to_wav24k(audio_path, audio24k_path)
+                print(f'{audiourl} converted to wav24k.')
+
+                if check_quality(audio24k_path):
+                    wav_path = dest_path / 'wav24k' / podcasturl_hash / '{name}.wav'.format(name=audiourl_hash)
+                    wav_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy(audio24k_path, wav_path)
+                    print(f'{audiourl} copied to {wav_path}.')
+                else:
+                    print(f'{audiourl} is not good quality.')
+
+                audio_path.unlink(missing_ok=True)
+                audio24k_path.unlink(missing_ok=True)
             except Exception as e:
-                print(f'Error: {audiourl} ({e})')
                 continue
-            if res.status_code != 200:
-                print(f'status code is {res.status_code}')
-                continue
-
-            audio_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(audio_path, 'wb') as f:
-                f.write(res.content)
-                f.flush()
-            print(f'{audiourl} downloaded.')
-
-            wav24k_path = dest_path / 'wav24k' / podcasturl_hash / '{name}.wav'.format(name=audiourl_hash)
-            wav24k_path.parent.mkdir(parents=True, exist_ok=True)
-            subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', str(audio_path), '-ar', '24000', '-ac', '1', str(wav24k_path)])
-            print(f'{audiourl} converted to wav24k.')
-            print()
-
             break
         else:
-            print(f'{podcasturl} not found.')
-            print()
+            print(f'Not found.')
     except Exception as e:
-        print(f'Error: {url} ({e})')
         continue
+
+#  find dataset/podcast/ja/wav24k -type d -empty -delete

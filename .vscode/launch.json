@@ -9,7 +9,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "CUDA_VISIBLE_DEVICES": "3"
+                "CUDA_VISIBLE_DEVICES": "3",
+                "TF_CPP_MIN_LOG_LEVEL": "2"
             },
             "subProcess": false,
             "args": [
