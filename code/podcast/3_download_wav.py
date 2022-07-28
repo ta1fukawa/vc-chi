@@ -46,7 +46,7 @@ min_speech_ratio = 0.80
 max_music_ratio  = 0.0100
 max_noise_mean_level = 0.0100
 
-seg_model = inaSpeechSegmenter.Segmenter(vad_engine='smn', detect_gender=False, batch_duration=1024)
+seg_model = inaSpeechSegmenter.Segmenter(vad_engine='smn', detect_gender=False, batch_size=1024)
 
 def check_quality(path):
     with redirect_stdout(open(os.devnull, 'w')):
@@ -75,7 +75,7 @@ def check_quality(path):
     music_ratio  = music_duration / full_duration
     noise_mean_level = np.mean(np.abs(np.concatenate(noise_wave))) if noise_wave else -np.inf
 
-    print('    speech_ratio={:.2f}, music_ratio={:.4f}, noise_mean_level={:.4f})'.format(speech_ratio, music_ratio, noise_mean_level))
+    print('Analysis: speech_ratio={:.2f}, music_ratio={:.4f}, noise_mean_level={:.4f})'.format(speech_ratio, music_ratio, noise_mean_level))
 
     if speech_ratio > min_speech_ratio and music_ratio < max_music_ratio and noise_mean_level < max_noise_mean_level:
         return True
@@ -88,9 +88,8 @@ with open(podcasturl_path, 'r') as f:
     podcasturls = f.readlines()
 
 rand_fname = ''.join(random.choice('0123456789abcdef') for _ in range(8))
-j = int(sys.argv[1])
-for i, podcasturl in enumerate(sorted(podcasturls)[j * 2000:(j + 1) * 2000]): ###
-    print(f'[{i + j * 2000}/{len(podcasturls)}] {podcasturl}')
+for i, podcasturl in enumerate(sorted(podcasturls)[5669:5700]):
+    print(f'[{i+5669}/{len(podcasturls)}] {podcasturl}')
     podcasturl_hash = hashlib.md5(podcasturl.strip().encode()).hexdigest()
 
     try:
@@ -105,25 +104,26 @@ for i, podcasturl in enumerate(sorted(podcasturls)[j * 2000:(j + 1) * 2000]): ##
             try:
                 audiourl = item.find('enclosure').get('url')
                 audiourl_hash = hashlib.md5(audiourl.encode()).hexdigest()
+                print(audiourl)
 
                 audio_path  = pathlib.Path('/tmp', '{fname}.{ext}'.format(fname=rand_fname, ext=audiourl.split('.')[-1]))
                 if download(audiourl, audio_path):
-                    print(f'{audiourl} downloaded.')
+                    print(f'Downloaded.')
                 else:
-                    print(f'{audiourl} download failed.')
+                    print(f'Download failed.')
                     continue
 
                 audio24k_path = pathlib.Path('/tmp', '{fname}_24k.wav'.format(fname=rand_fname))
                 convert_to_wav24k(audio_path, audio24k_path)
-                print(f'{audiourl} converted to wav24k.')
+                print(f'Converted to wav24k.')
 
                 if check_quality(audio24k_path):
                     wav_path = dest_path / 'wav24k' / podcasturl_hash / '{name}.wav'.format(name=audiourl_hash)
                     wav_path.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy(audio24k_path, wav_path)
-                    print(f'{audiourl} copied to {wav_path}.')
+                    print(f'Copied to {wav_path}.')
                 else:
-                    print(f'{audiourl} is not good quality.')
+                    print(f'Not good quality.')
 
                 audio_path.unlink(missing_ok=True)
                 audio24k_path.unlink(missing_ok=True)
