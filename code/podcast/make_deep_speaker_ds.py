@@ -21,7 +21,8 @@ def process(speaker):
     for speech in speeches:
         mfcc = read_mfcc(speech, SAMPLE_RATE)  # MFCCと書いてあるが、実際はメルスペクトログラムに変換される(NMELS=64)
         speech_name = speech.stem.replace('_', '-').replace('podcast', '')
-        dest_path = dest_dir / f'podcast-{speaker.name[:16]}-{speaker.name[32+1+16:]}_{speech_name}.npy'
+        speaker_name = f'podcast-{speaker.name[:16]}-{speaker.name[32+1+16:]}'.replace('_', '-')
+        dest_path = dest_dir / f'{speaker_name}_{speech_name}.npy'
         print(dest_path)
         np.save(dest_path, mfcc)
 
